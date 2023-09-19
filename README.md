@@ -1,0 +1,3 @@
+# Thermometer
+
+IR thermometer + thermistor
