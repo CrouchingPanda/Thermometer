@@ -16,8 +16,8 @@
 // #define TFT_MISO  -1 // MISO is not used or supported
 #define TFT_MOSI  19
 #define TFT_SCLK  18
-#define TFT_CS    20  // Chip select control pin
+// #define TFT_CS    20  // Chip select control pin -- GROUNDED
 #define TFT_DC    12  // Data Command control pin
-#define TFT_RST   15  // Reset pin (could connect to Arduino RESET pin)
+#define TFT_RST   26  // Reset pin (could connect to Arduino RESET pin)
 
 #define SPI_FREQUENCY  62500000
