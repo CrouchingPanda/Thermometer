@@ -3,11 +3,12 @@
 #include <Arduino.h>
 
 #include <Adafruit_LC709203F.h>
+#include <Adc.h>
 
 void LipoBattery::begin(TwoWire* wire) {
   pinMode(CHECK_GATE_PIN, OUTPUT);
 
-  adc = new ADC(CHARGING_STATUS_CHECK_PIN);
+  adc = new Adc(CHARGING_STATUS_CHECK_PIN);
   adc->begin();
 
   fuelGauge = new Adafruit_LC709203F();
@@ -22,7 +23,7 @@ bool LipoBattery::isCharging() {
 
 float LipoBattery::getVoltageReading(uint8_t pin) {
   digitalWrite(CHECK_GATE_PIN, HIGH);
-  float reading = adc->reading() * ADC::REF_BOARD_VOLTAGE * VOLTAGE_DIVIDER_RATIO;
+  float reading = adc->reading() * Adc::REF_BOARD_VOLTAGE * VOLTAGE_DIVIDER_RATIO;
   digitalWrite(CHECK_GATE_PIN, LOW);
   return reading;
 }

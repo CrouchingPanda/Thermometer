@@ -4,8 +4,7 @@
 #include <Arduino.h>
 
 #include <Adafruit_LC709203F.h>
-
-#include "ADC.h"
+#include <Adc.h>
 
 class LipoBattery {
 
@@ -22,7 +21,7 @@ class LipoBattery {
 
   Adafruit_LC709203F* fuelGauge;
 
-  ADC* adc;
+  Adc* adc;
 
   public:
   
