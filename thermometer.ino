@@ -1,75 +1,168 @@
 #include <Wire.h>
-#include <EEPROM.h>
-#include <SPI.h>
+#include <LittleFS.h>
 
-#include "src/touchscreen/Touchscreen.h"
-#include "src/indicator/HealthIndicator.h"
+#include "src/hmi/HMI.h"
+#include "src/calibration/CalibrationBoardReceiver.h"
 #include "src/hardware/MelexisThermometer.h"
-#include "src/hardware/LipoBattery.h"
-#include "src/hardware/Thermistor.h"
+#include "src/hardware/Battery.h"
+#include "src/hardware/PowerButtonLED.h"
+#include "src/monitor/HealthMonitor.h"
+#include "src/monitor/ActivityMonitor.h"
 
-/*
- * Fuel gauge board (rated for 400kHz I2C max) uses time slicing while 
- * RP2040 does not support it so I2C rate needs to be decreased for that.
- * Melexis Thermometer's I2C rate range is from 10kHz to 100kHz. Touchscreen
- * works fine at 400kHz so Wire interface is used for that while Wire1 is
- * used by these slower boards.
- */
-static constexpr uint16_t WIRE_1_I2C_FREQUENCY = 25'000;
+// faster doesn't work, not exactly sure why
+constexpr uint16_t I2C_FREQUENCY = 25'000;
 
-static constexpr uint16_t EEPROM_SIZE = 4096; // RP2040 Earle core specific
-
-auto touchscreen = Touchscreen::getInstance();
-auto healthIndicator = HealthIndicator();
-auto thermometer = MelexisThermometer();
-auto battery = LipoBattery();
-auto thermistor = Thermistor();
+static auto hmi = HMI();
+static auto calibrationReceiver = CalibrationBoardReceiver();
+static auto thermometer = MelexisThermometer();
+static auto battery = Battery();
+static auto powerButtonLED = PowerButtonLED();
+static auto healthMonitor = HealthMonitor();
+static auto activityMonitor = ActivityMonitor();
 
 void setup() {
-  healthIndicator.begin();
+  LittleFS.begin();
 
-  thermistor.begin();
+  hmi.begin();  
+  hmi.showLoadingScreen();
+  hmi.setLoadingPercent(10);
 
-  Wire1.setClock(WIRE_1_I2C_FREQUENCY);
+  healthMonitor.begin();
+  hmi.setLoadingPercent(20);
 
-  // other devices on the same bus must be on before battery communication starts
+  powerButtonLED.begin();
+  hmi.setLoadingPercent(30);
+
+  activityMonitor.begin();
+  hmi.setLoadingPercent(40);
+
+  Wire1.setClock(I2C_FREQUENCY);
+  hmi.setLoadingPercent(50);
+
   thermometer.begin(&Wire1);
+  hmi.setLoadingPercent(60);
+
   battery.begin(&Wire1);
-  
-  EEPROM.begin(EEPROM_SIZE);
+  hmi.setLoadingPercent(70);
 
-  touchscreen.begin(&EEPROM);
-  
-  touchscreen.setObjectTemperatureWriter(
-    [](){ return thermometer.objectTemperatureFarengheit(); }
+  calibrationReceiver.begin();
+  hmi.setLoadingPercent(80);
+
+  hmi.startLvgl();
+  hmi.setLoadingPercent(90);
+
+  hmi.setObjectTemperatureWriter(
+    [](){ return thermometer.objectTemperatureFahrenheit(); }
   );
 
-  touchscreen.setAmbientTemperatureWriter(
-    [](){ return thermometer.ambientTemperatureFarengheit(); }
+  hmi.setRoomTemperatureWriter(
+    [](){ return thermometer.roomTemperatureFahrenheit(); }
   );
 
-  touchscreen.setThermistorTemperatureWriter(
-    [](){ return thermistor.temperatureFarengheit(); }
+  hmi.setOnDieTemperatureWriter(
+    [](){ return thermometer.onDieTemperatureFahrenheit(); }
   );
 
-  touchscreen.setEmissivityWriter(
+  hmi.setEmissivityWriter(
     [](){ return thermometer.getEmissivity(); }
   );
 
-  touchscreen.setEmissivityReader(
+  hmi.setEmissivityReader(
     [](float emissivity){ thermometer.setEmissivity(emissivity); }
   );
 
-  touchscreen.setBatteryPercentageWriter(
+  hmi.setBatteryPercentageWriter(
     [](){ return battery.chargePercentage(); }
   );
 
-  touchscreen.setBatteryChargingStatusWriter(
+  hmi.setBatteryChargingStatusWriter(
     [](){ return battery.isCharging(); }
   );
+
+  hmi.setBatteryTemperatureWriter(
+    [](){ return battery.temperatureFahrenheit(); }
+  );
+
+  hmi.setCalibrationBoardConnectionStatusWriter(
+    [](){ return calibrationReceiver.isConnected(); }
+  );
+
+  hmi.setPrimaryThermistorTemperatureWriter(
+    [](){ return calibrationReceiver.primaryThermistorTemperatureFahrenheit(); }
+  );
+
+  hmi.setSecondaryThermistorTemperatureWriter(
+    [](){ return calibrationReceiver.secondaryThermistorTemperatureFahrenheit(); }
+  );
+
+  hmi.onActivity(
+    [](){ activityMonitor.registerActivity(); }
+  );
+
+  hmi.setLowPowerModeTimeoutWriter(
+    [](){ return activityMonitor.getLowPowerTimeoutMins(); }
+  );
+
+  hmi.setPowerOffTimeoutWriter(
+    [](){ return activityMonitor.getPowerOffTimeoutMins(); }
+  );
+
+  hmi.setLowPowerModeTimeoutReader(
+    [](uint8_t minutes){ activityMonitor.setLowPowerTimeoutMins(minutes); }
+  );
+
+  hmi.setPowerOffTimeoutReader(
+    [](uint8_t minutes){ activityMonitor.setPowerOffTimeoutMins(minutes); }
+  );
+
+  hmi.setPowerIndicatorOnBrightnessWriter(
+    [](){ return powerButtonLED.getOnBrightness(); }
+  );
+
+  hmi.setPowerIndicatorMaxBreathBrightnessWriter(
+    [](){ return powerButtonLED.getMaxBreathBrightness(); }
+  );
+
+  hmi.setPowerIndicatorOnBrightnessReader(
+    [](uint8_t brightness){ powerButtonLED.setOnBrightness(brightness); }
+  );
+
+  hmi.setPowerIndicatorMaxBreathBrightnessReader(
+    [](uint8_t brightness){ powerButtonLED.setMaxBreathBrightness(brightness); }
+  );
+
+  hmi.setObjectTemperatureSmoothingFactorWriter(
+    []() { return thermometer.getObjectTemperatureSmoothingFactor(); }
+  );
+
+  hmi.setObjectTemperatureSmoothingFactorReader(
+    [](uint8_t factor) { thermometer.setObjectTemperatureSmoothingFactor(factor); }
+  );
+
+  hmi.setRoomTemperatureOffsetWriter(
+    []() { return thermometer.getRoomTemperatureOffsetCelsius(); }
+  );
+
+  hmi.setRoomTemperatureOffsetReader(
+    [](float offset) { thermometer.setRoomTemperatureOffsetCelsius(offset); }
+  );
+
+  activityMonitor.onLowPowerMode(
+    [](){ hmi.initLowPowerMode(); }
+  );
+
+  activityMonitor.onDefaultMode(
+    [](){ hmi.initDefaultMode(); }
+  );
+
+  hmi.setLoadingPercent(100);
+  hmi.switchFromLoadingScreen();
 }
 
 void loop() {
-  touchscreen.run();
-  healthIndicator.run();
+  battery.isCharging() ? powerButtonLED.breathe() : powerButtonLED.on();
+  healthMonitor.run();
+  calibrationReceiver.run();
+  activityMonitor.run();
+  hmi.run();
 }

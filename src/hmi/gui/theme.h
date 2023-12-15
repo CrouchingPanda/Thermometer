@@ -1,0 +1,25 @@
+#ifndef THEME_H
+#define THEME_H
+
+#include "../ScreenSpec.h"
+
+// color palette
+#define PRIMARY_COLOR 0xA16EFF
+
+#define BACKGROUND_COLOR 0x1B1B38
+#define ACTIVE_BACKGROUND_COLOR 0x323259
+
+#define BORDER_COLOR 0x1E1E3C
+
+#define TEXT_COLOR 0xFFFFFF
+#define SECONDARY_TEXT_COLOR 0xB4B4DB
+#define PLACEHOLDER_TEXT_COLOR 0x646488
+#define DANGER_TEXT_COLOR 0xFF3D71
+
+#define TEXT_AREA_BACKGROUND_COLOR 0x252547
+
+// elements
+#define BORDER_RADIUS 4
+#define PADDING 4
+
+#endif // !THEME_H

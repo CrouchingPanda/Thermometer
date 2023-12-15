@@ -5,53 +5,53 @@
 
 #include <Wire.h>
 
+#include <Smoothed.h>
 #include <Adafruit_MLX90614.h>
 
 class MelexisThermometer {
-  static constexpr uint8_t SENSOR_POWER_PIN = A3;
 
-  static constexpr uint16_t SENSOR_RESET_POWER_DOWN_TIME_MS = 30;
-  static constexpr uint16_t SENSOR_RESET_POWER_UP_TIME_MS = 300;
+  static constexpr const char* EMISSIVITY_FILE = "melexis/emissivity";
+  static constexpr const char* AMBIENT_CORRECTION_OFFSET_FILE = "melexis/ambient_correction";
+  static constexpr const char* SMOOTHING_FACTOR_FILE = "melexis/smoothing_factor";
 
   static constexpr float MAX_EMISSIVITY = 1.0;
   static constexpr float MIN_EMISSIVITY = 0.1;
 
+  static constexpr uint8_t MAX_SMOOTHING_FACTOR = 100;
+
+  Smoothed<float>* smoother;
+  
+  uint8_t smoothingFactor = 10; // 1..MAX_SMOOTHING_FACTOR; more = less smooth
+
   Adafruit_MLX90614* sensor;
 
-  float cachedEmissivity = MAX_EMISSIVITY;
-  float cachedObjectTemperatureFarengheit = 73.0;
-  float cachedAmbientTemperatureFarengheit = 73.0;
+  float emissivity = MAX_EMISSIVITY;
+  
+  // assume the room temperature differs from die temperature by this number
+  // see "Temperature reading dependence on VDD" chapter in datasheet
+  float roomTemperatureOffsetCelsius = (3.3 - 3.0) * 0.6;
 
-  bool sensorResetting = false;
-  uint32_t sensorPoweredDownTimestamp = 0;
-  uint32_t sensorPoweredUpTimestamp = 0;
-
-  bool emissivitySettingPending = false;
-  float pendingEmissivity = MAX_EMISSIVITY;
-
- public:
+  public:
 
   void begin(TwoWire* wire);
 
-  float objectTemperatureFarengheit();
+  float objectTemperatureFahrenheit();
 
-  float ambientTemperatureFarengheit();
+  float onDieTemperatureFahrenheit();
+  
+  float roomTemperatureFahrenheit();
 
   float getEmissivity();
 
   void setEmissivity(float value);
 
- private:
+  float getRoomTemperatureOffsetCelsius();
+  
+  void setRoomTemperatureOffsetCelsius(float offset);
 
-  void handlePendingChanges();
+  uint8_t getObjectTemperatureSmoothingFactor();
 
-  void setPendingEmissivity();
-
-  void writeEmissivityToSensor(float value);
-
-  // the sensor needs to be power cycled every time emissivity gets changed
-  void powerDown();
-  void tryPowerUp();
+  void setObjectTemperatureSmoothingFactor(uint8_t value);
 };
 
 #endif  // !MELEXIS_THERMOMETER

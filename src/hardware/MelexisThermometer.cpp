@@ -1,92 +1,107 @@
+#include <math.h>
+
 #include "MelexisThermometer.h"
 
 #include <Arduino.h>
 
 #include <Wire.h>
+#include <LittleFS.h>
+
+#include <Smoothed.h>
 
 void MelexisThermometer::begin(TwoWire* wire) {
   sensor = new Adafruit_MLX90614();
-  pinMode(SENSOR_POWER_PIN, OUTPUT);
-  digitalWrite(SENSOR_POWER_PIN, HIGH);
-  delay(SENSOR_RESET_POWER_UP_TIME_MS);
   sensor->begin(MLX90614_I2CADDR, wire);
+
+  File file = LittleFS.open(EMISSIVITY_FILE, "r");
+  if (file) {
+    emissivity = file.parseFloat();
+    file.close();
+  }
+
+  file = LittleFS.open(AMBIENT_CORRECTION_OFFSET_FILE, "r");
+  if (file) {
+    roomTemperatureOffsetCelsius = file.parseFloat();
+    file.close();
+  }
+
+  smoother = new Smoothed<float>();
+  file = LittleFS.open(SMOOTHING_FACTOR_FILE, "r");
+  if (file) {
+    smoothingFactor = file.parseInt();
+    file.close();
+  }
+  smoother->begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
 }
 
-float MelexisThermometer::objectTemperatureFarengheit() {
-  handlePendingChanges();
-  if (sensorResetting) return cachedObjectTemperatureFarengheit;
-  cachedObjectTemperatureFarengheit = sensor->readObjectTempF();
-  return cachedObjectTemperatureFarengheit;
+float MelexisThermometer::objectTemperatureFahrenheit() {
+  float quadRoom = pow(sensor->readAmbientTempC() - roomTemperatureOffsetCelsius + 273.15, 4);
+  float quadObject = pow(sensor->readObjectTempC() + 273.15, 4);
+  float correctedObject = pow((quadObject - quadRoom + emissivity * quadRoom) / emissivity, 0.25);
+  float correctedObjectFahrenheit = (correctedObject - 273.15) * 1.8 + 32.0;
+  smoother->add(correctedObjectFahrenheit);
+  return smoother->get();
 }
 
-float MelexisThermometer::ambientTemperatureFarengheit() {
-  handlePendingChanges();
-  if (sensorResetting) return cachedAmbientTemperatureFarengheit;
-  cachedAmbientTemperatureFarengheit = sensor->readAmbientTempF();
-  return cachedAmbientTemperatureFarengheit;
+float MelexisThermometer::onDieTemperatureFahrenheit() {
+  return sensor->readAmbientTempF();
+}
+
+float MelexisThermometer::roomTemperatureFahrenheit() {
+  return (sensor->readAmbientTempC() - roomTemperatureOffsetCelsius) * 1.8 + 32.0;
 }
 
 float MelexisThermometer::getEmissivity() {
-  handlePendingChanges();
-  if (sensorResetting) return cachedEmissivity;
-  cachedEmissivity = sensor->readEmissivity();
-  return cachedEmissivity;
+  return emissivity;
 }
 
 void MelexisThermometer::setEmissivity(float value) {
-  if (sensorResetting) {
-    emissivitySettingPending = true;
-    pendingEmissivity = value;
-  } else {
-    writeEmissivityToSensor(value);
-  }
-}
-
-void MelexisThermometer::handlePendingChanges() {
-  if (sensorResetting) tryPowerUp();
-  if (emissivitySettingPending) setPendingEmissivity();
-}
-
-void MelexisThermometer::setPendingEmissivity() {
-  if (!emissivitySettingPending || sensorResetting) return;
-  writeEmissivityToSensor(pendingEmissivity);
-  emissivitySettingPending = false;
-}
-
-void MelexisThermometer::writeEmissivityToSensor(float value) {
+  if (emissivity == value) return;
+  
   if (value > MAX_EMISSIVITY) {
-    sensor->writeEmissivity(MAX_EMISSIVITY);
+    emissivity = MAX_EMISSIVITY;
   } else if (value < MIN_EMISSIVITY) {
-    sensor->writeEmissivity(MIN_EMISSIVITY);
+    emissivity = MIN_EMISSIVITY;
   } else {
-    sensor->writeEmissivity(value);
+    emissivity = value;
   }
-  powerDown();
+
+  File file = LittleFS.open(EMISSIVITY_FILE, "w+");
+  if (file) {
+    file.print(emissivity);
+    file.close();
+  }
 }
 
-void MelexisThermometer::powerDown() {
-  digitalWrite(SENSOR_POWER_PIN, LOW);
-  sensorResetting = true;
-  sensorPoweredDownTimestamp = millis();
-  sensorPoweredUpTimestamp = sensorPoweredDownTimestamp + SENSOR_RESET_POWER_DOWN_TIME_MS;
+float MelexisThermometer::getRoomTemperatureOffsetCelsius() {
+  return roomTemperatureOffsetCelsius;
 }
 
-void MelexisThermometer::tryPowerUp() {
-  if (!sensorResetting) return;
+void MelexisThermometer::setRoomTemperatureOffsetCelsius(float offset) {
+  if (offset == roomTemperatureOffsetCelsius) return;
+  roomTemperatureOffsetCelsius = offset;
+  File file = LittleFS.open(AMBIENT_CORRECTION_OFFSET_FILE, "w+");
+  if (file) {
+    file.print(roomTemperatureOffsetCelsius);
+    file.close();
+  }
+}
 
-  static bool isSensorOnPowerOnWait = false;
+uint8_t MelexisThermometer::getObjectTemperatureSmoothingFactor() {
+  return smoothingFactor;
+}
 
-  if (
-      millis() - sensorPoweredDownTimestamp >= SENSOR_RESET_POWER_DOWN_TIME_MS &&
-      !isSensorOnPowerOnWait) {
-    digitalWrite(SENSOR_POWER_PIN, HIGH);
-    sensorPoweredUpTimestamp = millis();
-    isSensorOnPowerOnWait = true;
-  };
+void MelexisThermometer::setObjectTemperatureSmoothingFactor(uint8_t value) {
+  if (smoothingFactor == value) return;
+  smoothingFactor = (value == 0 || value > MAX_SMOOTHING_FACTOR) 
+    ? MAX_SMOOTHING_FACTOR 
+    : value;
 
-  if (millis() - sensorPoweredUpTimestamp >= SENSOR_RESET_POWER_UP_TIME_MS &&
-      isSensorOnPowerOnWait) {
-    sensorResetting = false;
-    isSensorOnPowerOnWait = false;
-  };
+  delete smoother;
+  smoother = new Smoothed<float>();
+  smoother->begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
+
+  File file = LittleFS.open(SMOOTHING_FACTOR_FILE, "w+");
+  file.print(smoothingFactor);
+  file.close();
 }
