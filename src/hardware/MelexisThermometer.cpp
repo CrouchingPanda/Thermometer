@@ -102,6 +102,8 @@ void MelexisThermometer::setObjectTemperatureSmoothingFactor(uint8_t value) {
   smoother->begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
 
   File file = LittleFS.open(SMOOTHING_FACTOR_FILE, "w+");
-  file.print(smoothingFactor);
-  file.close();
+  if (file) { 
+    file.print(smoothingFactor);
+    file.close();
+  }
 }
