@@ -1,15 +1,16 @@
+#include "room_temperature_offset_controller.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
-
-#include "room_temperature_offset_controller.h"
+#include <stdlib.h>
 
 #include <lvgl.h>
 
 #include "controller.h"
-#include "../../../pub_sub.h"
+#include "../../../../pub_sub.h"
 
 #define OFFSET_OPTION_SIZE 5 // (-/+)X.X and a newline (except last where it's NULL instead)
 #define MAX_OFFSET 5.0
@@ -19,7 +20,7 @@
 
 static const char* offset_options(void) {
   static char options[OFFSET_OPTION_COUNT * OFFSET_OPTION_SIZE];
-  for (uint8_t i = 0; i < OFFSET_OPTION_COUNT; i++) {
+  for (size_t i = 0; i < OFFSET_OPTION_COUNT; ++i) {
     float offset = MAX_OFFSET - (i * OFFSET_STEP);
     bool isLastOption = i == OFFSET_OPTION_COUNT - 1;
     snprintf(
@@ -45,11 +46,12 @@ static void update_controller(lv_event_t* event) {
   controller_select_option(controller, optionIndex);
 }
 
-void make_room_temperature_offset_controller(lv_obj_t* parent) {
+lv_obj_t* make_room_temperature_offset_controller(lv_obj_t* parent) {
   lv_obj_t* controller = make_controller(parent);
   controller_set_label(controller, "Amb Offset\nCelsius");
   controller_set_options(controller, offset_options());
   controller_handle_option_change(controller, set_new_offset);
   lv_obj_add_event_cb(controller, update_controller, LV_EVENT_MSG_RECEIVED, NULL);
   lv_msg_subsribe_obj(NEW_ROOM_TEMPERATURE_OFFSET, controller, NULL);
+  return controller;
 }

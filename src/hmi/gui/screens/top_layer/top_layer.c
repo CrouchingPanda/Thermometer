@@ -1,6 +1,6 @@
-#include <stdlib.h>
-
 #include "top_layer.h"
+
+#include <stdlib.h>
 
 #include <lvgl.h>
 
@@ -8,6 +8,8 @@
 #include "../../theme.h"
 #include "../../utils/card.h"
 #include "../../fonts/fonts.h"
+
+#define LOW_BATTERY_PERCENTAGE 10
 
 static void update_calibration_board_connection_indicator(lv_event_t* event) {
   lv_msg_t* message = lv_event_get_msg(event);

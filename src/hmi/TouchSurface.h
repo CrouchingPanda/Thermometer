@@ -8,17 +8,12 @@
 
 class TouchSurface {
 
-  static constexpr uint8_t TOUCHSCREEN_SDA_PIN = 0;
-  static constexpr uint8_t TOUCHSCREEN_SCL_PIN = 1;
-
-  static inline Adafruit_FT6206 touchSurface = Adafruit_FT6206();
+  static Adafruit_FT6206 touchSurface;
 
   using OnTouchCallback = void(*)();
-  static inline OnTouchCallback onTouchCallback = nullptr;
+  static OnTouchCallback onTouchCallback;
 
   public:
-
-  static TouchSurface* getInstance();
 
   void begin();
 
@@ -26,7 +21,11 @@ class TouchSurface {
 
   void onTouch(OnTouchCallback callback);
 
+  private:
+
   static void readTouchpad(lv_indev_drv_t* touchpadDriver, lv_indev_data_t* touchData);
 };
+
+extern TouchSurface CapTouchSurface;
 
 #endif // !TOUCH_SURFACE_H

@@ -1,12 +1,11 @@
-#include <string.h>
-
 #include "auth_screen.h"
+
+#include <string.h>
 
 #include <lvgl.h>
 
 #include "../../pub_sub.h"
 #include "../../theme.h"
-#include "../../fonts/fonts.h"
 #include "../../utils/container.h"
 #include "../../utils/card.h"
 #include "../../utils/screen.h"
@@ -32,7 +31,7 @@ static void handle_password_typing(lv_event_t* event) {
     lv_textarea_set_text(password_input_area, "");
   } else if (strcmp(button_text, LV_SYMBOL_NEW_LINE) == 0) {
     const char* input = lv_textarea_get_text(password_input_area);
-    lv_event_send(lv_scr_act(), LV_EVENT_READY, input);
+    lv_event_send(lv_scr_act(), LV_EVENT_READY, (void*) input);
   } else {
     lv_textarea_add_text(password_input_area, button_text);
     lv_obj_add_flag(bad_password_alert, LV_OBJ_FLAG_HIDDEN);
@@ -117,6 +116,7 @@ void auth_screen_init(void) {
   lv_obj_set_style_bg_color(buttons, lv_color_hex(PRIMARY_COLOR), LV_PART_ITEMS);
   lv_obj_set_style_text_color(buttons, lv_color_hex(TEXT_COLOR), LV_PART_ITEMS);
   lv_obj_clear_flag(buttons, LV_OBJ_FLAG_CLICK_FOCUSABLE);
+  lv_obj_add_flag(buttons, LV_OBJ_FLAG_ADV_HITTEST);
   lv_btnmatrix_set_map(buttons, keyset);
   lv_btnmatrix_set_btn_ctrl_all(buttons, LV_BTNMATRIX_CTRL_NO_REPEAT);
   lv_obj_add_event_cb(buttons, handle_password_typing, LV_EVENT_VALUE_CHANGED, NULL);

@@ -1,54 +1,67 @@
-#include <math.h>
-
 #include "MelexisThermometer.h"
+
+#include <math.h>
+#include <stdint.h>
 
 #include <Arduino.h>
 
 #include <Wire.h>
-#include <LittleFS.h>
 
 #include <Smoothed.h>
 
-void MelexisThermometer::begin(TwoWire* wire) {
-  sensor = new Adafruit_MLX90614();
-  sensor->begin(MLX90614_I2CADDR, wire);
+#include "../config/ConfigStore.h"
 
-  File file = LittleFS.open(EMISSIVITY_FILE, "r");
-  if (file) {
-    emissivity = file.parseFloat();
-    file.close();
-  }
+constexpr const char* EMISSIVITY_CONFIG_KEY = "thermometerEmissivity";
+constexpr float MAX_EMISSIVITY = 1.0;
+constexpr float MIN_EMISSIVITY = 0.1;
 
-  file = LittleFS.open(AMBIENT_CORRECTION_OFFSET_FILE, "r");
-  if (file) {
-    roomTemperatureOffsetCelsius = file.parseFloat();
-    file.close();
-  }
+constexpr const char* AMBIENT_CORRECTION_OFFSET_CONFIG_KEY = "thermometerAmbientCorrection";
 
-  smoother = new Smoothed<float>();
-  file = LittleFS.open(SMOOTHING_FACTOR_FILE, "r");
-  if (file) {
-    smoothingFactor = file.parseInt();
-    file.close();
-  }
-  smoother->begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
+// see "Temperature reading dependence on VDD" chapter in MLX90614 datasheet
+constexpr double DEFAUT_TEMPERATURE_OFFSET_CELCIUS = (3.3 - 3.0) * 0.6;
+
+constexpr const char* SMOOTHING_FACTOR_CONFIG_KEY = "thermometerSmoothingFactor";
+constexpr uint8_t MAX_SMOOTHING_FACTOR = 100;
+constexpr uint8_t DEFAULT_SMOOTHING_FACTOR = 10;
+
+MelexisThermometer::MelexisThermometer(ConfigStore& config) :
+  config(config),
+  sensor(Adafruit_MLX90614()),
+  smoother(Smoothed<double>()) {};
+
+void MelexisThermometer::begin() {
+  sensor.begin(MLX90614_I2CADDR, &Wire1);
+
+  emissivity = config.getOrDefault(EMISSIVITY_CONFIG_KEY, MAX_EMISSIVITY);
+  
+  roomTemperatureOffsetCelsius = config.getOrDefault(
+    AMBIENT_CORRECTION_OFFSET_CONFIG_KEY, 
+    DEFAUT_TEMPERATURE_OFFSET_CELCIUS
+  );
+  
+  smoothingFactor = config.getOrDefault(
+    SMOOTHING_FACTOR_CONFIG_KEY, 
+    DEFAULT_SMOOTHING_FACTOR
+  );
+  smoother.begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
 }
 
+// see README for the algorithm explanation
 float MelexisThermometer::objectTemperatureFahrenheit() {
-  float quadRoom = pow(sensor->readAmbientTempC() - roomTemperatureOffsetCelsius + 273.15, 4);
-  float quadObject = pow(sensor->readObjectTempC() + 273.15, 4);
-  float correctedObject = pow((quadObject - quadRoom + emissivity * quadRoom) / emissivity, 0.25);
-  float correctedObjectFahrenheit = (correctedObject - 273.15) * 1.8 + 32.0;
-  smoother->add(correctedObjectFahrenheit);
-  return smoother->get();
+  double quadRoom = pow(sensor.readAmbientTempC() - roomTemperatureOffsetCelsius + 273.15, 4);
+  double quadObject = pow(sensor.readObjectTempC() + 273.15, 4);
+  double correctedObject = pow((quadObject - quadRoom + emissivity * quadRoom) / emissivity, 0.25);
+  double correctedObjectFahrenheit = (correctedObject - 273.15) * 1.8 + 32.0;
+  smoother.add(correctedObjectFahrenheit);
+  return smoother.get();
 }
 
 float MelexisThermometer::onDieTemperatureFahrenheit() {
-  return sensor->readAmbientTempF();
+  return sensor.readAmbientTempF();
 }
 
 float MelexisThermometer::roomTemperatureFahrenheit() {
-  return (sensor->readAmbientTempC() - roomTemperatureOffsetCelsius) * 1.8 + 32.0;
+  return (sensor.readAmbientTempC() - roomTemperatureOffsetCelsius) * 1.8 + 32.0;
 }
 
 float MelexisThermometer::getEmissivity() {
@@ -66,11 +79,7 @@ void MelexisThermometer::setEmissivity(float value) {
     emissivity = value;
   }
 
-  File file = LittleFS.open(EMISSIVITY_FILE, "w+");
-  if (file) {
-    file.print(emissivity);
-    file.close();
-  }
+  config.set(EMISSIVITY_CONFIG_KEY, emissivity);
 }
 
 float MelexisThermometer::getRoomTemperatureOffsetCelsius() {
@@ -80,11 +89,7 @@ float MelexisThermometer::getRoomTemperatureOffsetCelsius() {
 void MelexisThermometer::setRoomTemperatureOffsetCelsius(float offset) {
   if (offset == roomTemperatureOffsetCelsius) return;
   roomTemperatureOffsetCelsius = offset;
-  File file = LittleFS.open(AMBIENT_CORRECTION_OFFSET_FILE, "w+");
-  if (file) {
-    file.print(roomTemperatureOffsetCelsius);
-    file.close();
-  }
+  config.set(AMBIENT_CORRECTION_OFFSET_CONFIG_KEY, roomTemperatureOffsetCelsius);
 }
 
 uint8_t MelexisThermometer::getObjectTemperatureSmoothingFactor() {
@@ -97,13 +102,9 @@ void MelexisThermometer::setObjectTemperatureSmoothingFactor(uint8_t value) {
     ? MAX_SMOOTHING_FACTOR 
     : value;
 
-  delete smoother;
-  smoother = new Smoothed<float>();
-  smoother->begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
-
-  File file = LittleFS.open(SMOOTHING_FACTOR_FILE, "w+");
-  if (file) { 
-    file.print(smoothingFactor);
-    file.close();
-  }
+  smoother = Smoothed<double>();
+  smoother.begin(SMOOTHED_EXPONENTIAL, smoothingFactor);
+  config.set(SMOOTHING_FACTOR_CONFIG_KEY, smoothingFactor);
 }
+
+MelexisThermometer Thermometer = MelexisThermometer(Config);

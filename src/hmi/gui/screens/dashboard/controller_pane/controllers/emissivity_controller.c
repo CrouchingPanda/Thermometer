@@ -1,15 +1,16 @@
+#include "emissivity_controller.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
-
-#include "emissivity_controller.h"
+#include <stdlib.h>
 
 #include <lvgl.h>
 
 #include "controller.h"
-#include "../../../pub_sub.h"
+#include "../../../../pub_sub.h"
 
 #define EMISSIVITY_OPTION_SIZE 5 // 0.XX and a newline (except last where it's NULL instead of a newline)
 #define EMISSIVITY_OPTION_COUNT 90
@@ -18,7 +19,7 @@
 
 static const char* emissivity_options(void) {
   static char options[EMISSIVITY_OPTION_COUNT * EMISSIVITY_OPTION_SIZE];
-  for (uint8_t i = 0; i < EMISSIVITY_OPTION_COUNT; i++) {
+  for (size_t i = 0; i < EMISSIVITY_OPTION_COUNT; ++i) {
     float emissivity = MAX_EMISSIVITY - (i * EMISSIVITY_STEP);
     bool isLastOption = i == EMISSIVITY_OPTION_COUNT - 1;
     snprintf(
@@ -44,11 +45,12 @@ static void update_controller(lv_event_t* event) {
   controller_select_option(controller, optionIndex);
 }
 
-void make_emissivity_controller(lv_obj_t* parent) {
+lv_obj_t* make_emissivity_controller(lv_obj_t* parent) {
   lv_obj_t* controller = make_controller(parent);
   controller_set_label(controller, "Emissivity");
   controller_set_options(controller, emissivity_options());
   controller_handle_option_change(controller, set_new_emissivity);
   lv_obj_add_event_cb(controller, update_controller, LV_EVENT_MSG_RECEIVED, NULL);
   lv_msg_subsribe_obj(NEW_EMISSIVITY_READING, controller, NULL);
+  return controller;
 }

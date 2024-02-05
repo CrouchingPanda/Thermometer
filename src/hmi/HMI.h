@@ -1,6 +1,8 @@
 #ifndef HMI_H
 #define HMI_H
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
 #include <lvgl.h>
@@ -9,24 +11,18 @@
 #include "TouchSurface.h"
 #include "gui/pub_sub.h"
 
-// this class acts as a bridge between C-style LVGL code and C++ Arduino
-class HMI {
-  
-  static constexpr uint8_t LVGL_TIMER_HANDLER_PERIOD_MS = 5;
+// this class acts as a bridge between C LVGL code and C++ Arduino
+class PublicHMI {
 
-  static constexpr uint16_t OBJECT_TEMPERATURE_UPDATE_FREQUENCY_MS = 300;
-  static constexpr uint16_t ON_DIE_TEMPERATURE_UPDATE_FREQUENCY_MS = 1000;
-  static constexpr uint16_t ROOM_TEMPERATURE_UPDATE_FREQUENCY_MS = 1000;
-  static constexpr uint16_t BATTERY_TEMPERATURE_UPDATE_FREQUENCY_MS = 5000;
-  static constexpr uint16_t BATTERY_CHARGE_PERCENTAGE_UPDATE_FREQUENCY_MS = 10000;
-  static constexpr uint16_t BATTERY_CHARGING_STATUS_UPDATE_FREQUENCY_MS = 1000;
-  static constexpr uint16_t CALIBRATION_BOARD_CONNECTION_STATUS_UPDATE_FREQUENCY_MS = 1000;
-  static constexpr uint16_t CALIBRATION_THERMISTORS_TEMPERATURE_UPDATE_FREQUENCY_MS = 1000;
+  DisplayScreen& display;
 
-  static inline Display* display = Display::getInstance();
-  static inline TouchSurface* touchSurface = TouchSurface::getInstance();
+  TouchSurface& touchSurface;
 
   public:
+
+  PublicHMI(DisplayScreen& display, TouchSurface& touchSurface) :
+    display(display),
+    touchSurface(touchSurface) {};
 
   using TemperatureWriter = float(*)();
   void setObjectTemperatureWriter(TemperatureWriter callback);
@@ -118,5 +114,7 @@ class HMI {
 
   void registerDisplayHooksWithLvgl();
 };
+
+extern PublicHMI HMI;
 
 #endif  // !HMI_H

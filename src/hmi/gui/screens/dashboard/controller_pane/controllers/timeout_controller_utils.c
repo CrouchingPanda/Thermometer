@@ -1,9 +1,10 @@
+#include "timeout_controller_utils.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "timeout_controller_utils.h"
+#include <stdlib.h>
 
 #include <lvgl.h>
 
@@ -16,7 +17,7 @@
 const char* timeout_options(void) {
   static char options[(TIMEOUT_OPTION_COUNT - 1) * TIMEOUT_OPTION_SIZE + TIMEOUT_OFF_OPTION_SIZE];
   strncpy(options, TIMEOUT_OFF_OPTION, TIMEOUT_OFF_OPTION_SIZE);
-  for (uint8_t i = 0; i < TIMEOUT_OPTION_COUNT - 1; i++) {
+  for (size_t i = 0; i < TIMEOUT_OPTION_COUNT - 1; ++i) {
     uint8_t timeoutMins = (i + 1) * TIMEOUT_OPTION_STEP;
     bool isLastOption = i == (TIMEOUT_OPTION_COUNT - 1) - 1;
     snprintf(
@@ -33,7 +34,7 @@ void update_timeout_controller(lv_event_t* event) {
   lv_obj_t* controller = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
   uint8_t* timeoutMins = (uint8_t*) lv_msg_get_payload(message);
-  for (uint8_t i = 0; i < TIMEOUT_OPTION_COUNT; i++) {
+  for (size_t i = 0; i < TIMEOUT_OPTION_COUNT; ++i) {
     if (*timeoutMins <= i * TIMEOUT_OPTION_STEP) {
       controller_select_option(controller, i);
       return;

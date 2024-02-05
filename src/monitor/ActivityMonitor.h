@@ -1,20 +1,21 @@
 #ifndef ACTIVITY_MONITOR_H
 #define ACTIVITY_MONITOR_H
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
-class ActivityMonitor {
+#include "../config/ConfigStore.h"
 
-  static constexpr uint8_t POWER_OFF_PIN = 6;
+class UserActivityMonitor {
 
-  static constexpr const char* LOW_POWER_TIMEOUT_FILE = "activity/low_power_timeout";
-  static constexpr const char* POWER_OFF_TIMEOUT_FILE = "activity/power_off_timeout";
+  ConfigStore& config;
 
   uint32_t lastActivityTimestamp = 0;
 
   // 0 = timeout disabled
-  uint32_t lowPowerTimeoutMs = 5 * 60 * 1000;
-  uint32_t powerOffTimeoutMs = 7 * 60 * 1000;
+  uint32_t lowPowerTimeoutMs;
+  uint32_t powerOffTimeoutMs;
 
   enum Mode { DEFAULT, LOW_POWER } mode = DEFAULT;
 
@@ -23,6 +24,8 @@ class ActivityMonitor {
   OnModeChangeCallback onDefaultModeCallback = nullptr;
 
   public:
+
+  UserActivityMonitor(ConfigStore& config) : config(config) {};
 
   void begin();
 
@@ -42,5 +45,7 @@ class ActivityMonitor {
 
   void run();
 };
+
+extern UserActivityMonitor ActivityMonitor;
 
 #endif // !ACTIVITY_MONITOR_H

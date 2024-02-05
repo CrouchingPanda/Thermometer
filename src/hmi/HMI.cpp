@@ -1,5 +1,7 @@
 #include "HMI.h"
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
 #include <lvgl.h>
@@ -8,6 +10,17 @@
 #include "TouchSurface.h"
 #include "gui/ui.h"
 #include "gui/pub_sub.h"
+
+constexpr uint8_t LVGL_TIMER_HANDLER_PERIOD_MS = 5;
+
+constexpr uint16_t OBJECT_TEMPERATURE_UPDATE_FREQUENCY_MS = 300;
+constexpr uint16_t ON_DIE_TEMPERATURE_UPDATE_FREQUENCY_MS = 3000;
+constexpr uint16_t ROOM_TEMPERATURE_UPDATE_FREQUENCY_MS = 3000;
+constexpr uint16_t BATTERY_TEMPERATURE_UPDATE_FREQUENCY_MS = 5000;
+constexpr uint16_t BATTERY_CHARGE_PERCENTAGE_UPDATE_FREQUENCY_MS = 10000;
+constexpr uint16_t BATTERY_CHARGING_STATUS_UPDATE_FREQUENCY_MS = 1000;
+constexpr uint16_t CALIBRATION_BOARD_CONNECTION_STATUS_UPDATE_FREQUENCY_MS = 1000;
+constexpr uint16_t CALIBRATION_THERMISTORS_TEMPERATURE_UPDATE_FREQUENCY_MS = 1000;
 
 static void logging_init() {
   lv_log_register_print_cb(
@@ -18,64 +31,65 @@ static void logging_init() {
   );
 }
 
-void HMI::begin() {
-  display->begin();
-  touchSurface->begin();
+void PublicHMI::begin() {
+  display.begin();
+  touchSurface.begin();
 }
 
-void HMI::showLoadingScreen() {
-  display->showLoadingScreen();
+void PublicHMI::showLoadingScreen() {
+  display.showLoadingScreen();
 }
 
-void HMI::setLoadingPercent(uint8_t percent) {
-  display->setLoadingPercent(percent);
+void PublicHMI::setLoadingPercent(uint8_t percent) {
+  display.setLoadingPercent(percent);
 }
 
-void HMI::switchFromLoadingScreen() {
-  display->switchFromLoadingScreen();
+void PublicHMI::switchFromLoadingScreen() {
+  display.switchFromLoadingScreen();
 }
 
-void HMI::startLvgl() {
+void PublicHMI::startLvgl() {
   lv_init();
   logging_init(); // comes first to log any errors in the following set-ups
-  display->registerWithLvgl();
-  touchSurface->registerWithLvgl();
+  display.registerWithLvgl();
+  touchSurface.registerWithLvgl();
   ui_init();
   registerDisplayHooksWithLvgl();
 }
 
-void HMI::registerDisplayHooksWithLvgl() {
-  uint8_t brightness = display->getDefaultBrightness();
+void PublicHMI::registerDisplayHooksWithLvgl() {
+  uint8_t brightness = display.getDefaultBrightness();
   lv_msg_send(NEW_DISPLAY_BRIGHTNESS, &brightness);
 
   lv_msg_subscribe(
     SET_DISPLAY_BRIGHTNESS,
     [](void* _, lv_msg_t* message) {
+      auto display = (DisplayScreen*) lv_msg_get_user_data(message);
       uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
       display->setDefaultBrightness(*newBrightness);
     },
-    (void*) nullptr
+    (void*) &display
   );
 }
 
-void HMI::onActivity(OnActivityCallback callback) {
-  touchSurface->onTouch(callback);
+void PublicHMI::onActivity(OnActivityCallback callback) {
+  touchSurface.onTouch(callback);
 }
 
-void HMI::initLowPowerMode() {
-  display->initLowPowerMode();
+void PublicHMI::initLowPowerMode() {
+  display.initLowPowerMode();
 }
 
-void HMI::initDefaultMode() {
-  display->initDefaultPowerMode();
+void PublicHMI::initDefaultMode() {
+  display.initDefaultPowerMode();
 }
 
-void HMI::run() {
-  display->run();
+void PublicHMI::run() {
+  display.run();
   lv_timer_handler_run_in_period(LVGL_TIMER_HANDLER_PERIOD_MS);
 }
 
-void HMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
+void PublicHMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
       auto getBatteryPercentage = (BatteryPercentageWriter) timer->user_data;
@@ -90,7 +104,7 @@ void HMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
   lv_msg_send(NEW_BATTERY_PERCENTAGE, &percentage);
 }
 
-void HMI::setBatteryChargingStatusWriter(BatteryChargingStatusWriter callback) {
+void PublicHMI::setBatteryChargingStatusWriter(BatteryChargingStatusWriter callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
       auto getBatteryChargingStatus = (BatteryPercentageWriter) timer->user_data;
@@ -105,12 +119,12 @@ void HMI::setBatteryChargingStatusWriter(BatteryChargingStatusWriter callback) {
   lv_msg_send(NEW_BATTERY_CHARGING_STATUS, &batteryIsCharging);
 }
 
-void HMI::setEmissivityWriter(EmissivityWriter callback) {
+void PublicHMI::setEmissivityWriter(EmissivityWriter callback) {
   float emissivity = callback();
   lv_msg_send(NEW_EMISSIVITY_READING, &emissivity);
 }
 
-void HMI::setEmissivityReader(EmissivityReader callback) {
+void PublicHMI::setEmissivityReader(EmissivityReader callback) {
   lv_msg_subscribe(
     SET_EMISSIVITY,
     [](void* _, lv_msg_t* message) {
@@ -122,7 +136,7 @@ void HMI::setEmissivityReader(EmissivityReader callback) {
   );
 }
 
-void HMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter  callback) {
+void PublicHMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter  callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
       auto getConnectionStatus = (ConnectionStatusWriter) timer->user_data;
@@ -137,7 +151,7 @@ void HMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter  call
   lv_msg_send(NEW_CALIBRATION_BOARD_CONNECTION, &boardIsConnected);
 }
 
-void HMI::makeTemperatureWriterTimer(TemperatureWriterTimerDTO* dto) {
+void PublicHMI::makeTemperatureWriterTimer(TemperatureWriterTimerDTO* dto) {
   lv_timer_create(
     [](lv_timer_t* timer) {
       auto dto = (TemperatureWriterTimerDTO*) timer->user_data;
@@ -149,7 +163,7 @@ void HMI::makeTemperatureWriterTimer(TemperatureWriterTimerDTO* dto) {
   );
 }
 
-void HMI::setObjectTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setObjectTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_OBJECT_TEMPERATURE,
     .getTemperature = callback,
@@ -158,7 +172,7 @@ void HMI::setObjectTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setRoomTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setRoomTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_ROOM_TEMPERATURE,
     .getTemperature = callback,
@@ -167,7 +181,7 @@ void HMI::setRoomTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setOnDieTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setOnDieTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_ON_DIE_TEMPERATURE,
     .getTemperature = callback,
@@ -176,7 +190,7 @@ void HMI::setOnDieTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setBatteryTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setBatteryTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_BATTERY_TEMPERATURE,
     .getTemperature = callback,
@@ -185,7 +199,7 @@ void HMI::setBatteryTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setPrimaryThermistorTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setPrimaryThermistorTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_PRIMARY_THERMISTOR_TEMPERATURE,
     .getTemperature = callback,
@@ -194,7 +208,7 @@ void HMI::setPrimaryThermistorTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setSecondaryThermistorTemperatureWriter(TemperatureWriter callback) {
+void PublicHMI::setSecondaryThermistorTemperatureWriter(TemperatureWriter callback) {
   static TemperatureWriterTimerDTO dto = {
     .message = NEW_SECONDARY_THERMISTOR_TEMPERATURE,
     .getTemperature = callback,
@@ -203,20 +217,20 @@ void HMI::setSecondaryThermistorTemperatureWriter(TemperatureWriter callback) {
   makeTemperatureWriterTimer(&dto);
 }
 
-void HMI::setTimeoutWriter(Message message, TimeoutWriter callback) {
+void PublicHMI::setTimeoutWriter(Message message, TimeoutWriter callback) {
   uint8_t timeoutMins = callback();
   lv_msg_send(message, &timeoutMins);
 }
 
-void HMI::setLowPowerModeTimeoutWriter(TimeoutWriter callback) {
+void PublicHMI::setLowPowerModeTimeoutWriter(TimeoutWriter callback) {
   setTimeoutWriter(NEW_LOW_POWER_MODE_TIMEOUT, callback);
 }
 
-void HMI::setPowerOffTimeoutWriter(TimeoutWriter callback) {
+void PublicHMI::setPowerOffTimeoutWriter(TimeoutWriter callback) {
   setTimeoutWriter(NEW_POWER_OFF_TIMEOUT, callback);
 }
 
-void HMI::makeTimeoutReaderSubscription(Message message, TimeoutReader callback) {
+void PublicHMI::makeTimeoutReaderSubscription(Message message, TimeoutReader callback) {
   lv_msg_subscribe(
     message,
     [](void* _, lv_msg_t* message) {
@@ -228,28 +242,28 @@ void HMI::makeTimeoutReaderSubscription(Message message, TimeoutReader callback)
   );
 }
 
-void HMI::setLowPowerModeTimeoutReader(TimeoutReader callback) {
+void PublicHMI::setLowPowerModeTimeoutReader(TimeoutReader callback) {
   makeTimeoutReaderSubscription(SET_LOW_POWER_MODE_TIMEOUT, callback);
 }
 
-void HMI::setPowerOffTimeoutReader(TimeoutReader callback) {
+void PublicHMI::setPowerOffTimeoutReader(TimeoutReader callback) {
   makeTimeoutReaderSubscription(SET_POWER_OFF_TIMEOUT, callback);
 }
 
-void HMI::setBrightnessWriter(Message message, BrightnessWriter callback) {
+void PublicHMI::setBrightnessWriter(Message message, BrightnessWriter callback) {
   uint8_t brightness = callback();
   lv_msg_send(message, &brightness);
 }
 
-void HMI::setPowerIndicatorOnBrightnessWriter(BrightnessWriter callback) {
+void PublicHMI::setPowerIndicatorOnBrightnessWriter(BrightnessWriter callback) {
   setBrightnessWriter(NEW_POWER_INDICATOR_ON_BRIGHTNESS, callback);
 }
 
-void HMI::setPowerIndicatorMaxBreathBrightnessWriter(BrightnessWriter callback) {
+void PublicHMI::setPowerIndicatorMaxBreathBrightnessWriter(BrightnessWriter callback) {
   setBrightnessWriter(NEW_POWER_INDICATOR_MAX_BREATH_BRIGHTNESS, callback);
 }
 
-void HMI::makeBrightnessReaderSubscription(Message message, BrightnessReader callback) {
+void PublicHMI::makeBrightnessReaderSubscription(Message message, BrightnessReader callback) {
   lv_msg_subscribe(
     message,
     [](void* _, lv_msg_t* message) {
@@ -261,20 +275,20 @@ void HMI::makeBrightnessReaderSubscription(Message message, BrightnessReader cal
   );
 }
 
-void HMI::setPowerIndicatorOnBrightnessReader(BrightnessReader callback) {
+void PublicHMI::setPowerIndicatorOnBrightnessReader(BrightnessReader callback) {
   makeBrightnessReaderSubscription(SET_POWER_INDICATOR_ON_BRIGHTNESS, callback);
 }
 
-void HMI::setPowerIndicatorMaxBreathBrightnessReader(BrightnessReader callback) {
+void PublicHMI::setPowerIndicatorMaxBreathBrightnessReader(BrightnessReader callback) {
   makeBrightnessReaderSubscription(SET_POWER_INDICATOR_MAX_BREATH_BRIGHTNESS, callback);
 }
 
-void HMI::setObjectTemperatureSmoothingFactorWriter(SmoothingFactorWriter callback) {
+void PublicHMI::setObjectTemperatureSmoothingFactorWriter(SmoothingFactorWriter callback) {
   uint8_t smoothingFactor = callback();
   lv_msg_send(NEW_OBJECT_TEMPERATURE_SMOOTHING, &smoothingFactor);
 }
 
-void HMI::setObjectTemperatureSmoothingFactorReader(SmoothingFactorReader callback) {
+void PublicHMI::setObjectTemperatureSmoothingFactorReader(SmoothingFactorReader callback) {
   lv_msg_subscribe(
     SET_OBJECT_TEMPERATURE_SMOOTHER_FACTOR,
     [](void* _, lv_msg_t* message) {
@@ -286,12 +300,12 @@ void HMI::setObjectTemperatureSmoothingFactorReader(SmoothingFactorReader callba
   );
 }
 
-void HMI::setRoomTemperatureOffsetWriter(TemperatureOffsetWriter callback) {
+void PublicHMI::setRoomTemperatureOffsetWriter(TemperatureOffsetWriter callback) {
   float offset = callback();
   lv_msg_send(NEW_ROOM_TEMPERATURE_OFFSET, &offset);
 }
 
-void HMI::setRoomTemperatureOffsetReader(TemperatureOffsetReader callback) {
+void PublicHMI::setRoomTemperatureOffsetReader(TemperatureOffsetReader callback) {
   lv_msg_subscribe(
     SET_ROOM_TEMPERATURE_OFFSET,
     [](void* _, lv_msg_t* message) {
@@ -302,3 +316,5 @@ void HMI::setRoomTemperatureOffsetReader(TemperatureOffsetReader callback) {
     (void*) callback
   );
 }
+
+PublicHMI HMI = PublicHMI(Display, CapTouchSurface);

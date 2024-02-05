@@ -1,60 +1,64 @@
 #include "ActivityMonitor.h"
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
-#include <LittleFS.h>
+#include "../config/ConfigStore.h"
 
-void ActivityMonitor::begin() {
+constexpr uint8_t POWER_OFF_PIN = 6;
+
+constexpr const char* LOW_POWER_TIMEOUT_CONFIG_KEY = "activityLowPowerTimeout";
+constexpr uint32_t DEFAULT_LOW_POWER_TIMEOUT_MS = 5 * 60 * 1000;
+
+constexpr const char* POWER_OFF_TIMEOUT_CONFIG_KEY = "activityPowerOffTimeout";
+constexpr uint32_t DEFAULT_POWER_OFF_TIMEOUT_MS = 7 * 60 * 1000;
+
+void UserActivityMonitor::begin() {
   pinMode(POWER_OFF_PIN, OUTPUT);
 
-  File file = LittleFS.open(LOW_POWER_TIMEOUT_FILE, "r");
-  if (file) {
-    lowPowerTimeoutMs = file.parseInt();
-    file.close();
-  }
+  lowPowerTimeoutMs = config.getOrDefault(
+    LOW_POWER_TIMEOUT_CONFIG_KEY,
+    DEFAULT_LOW_POWER_TIMEOUT_MS
+  );
 
-  file = LittleFS.open(POWER_OFF_TIMEOUT_FILE, "r");
-  if (file) {
-    powerOffTimeoutMs = file.parseInt();
-    file.close();
-  }
+  powerOffTimeoutMs = config.getOrDefault(
+    POWER_OFF_TIMEOUT_CONFIG_KEY,
+    DEFAULT_POWER_OFF_TIMEOUT_MS
+  );
 }
 
-void ActivityMonitor::registerActivity() {
+void UserActivityMonitor::registerActivity() {
   lastActivityTimestamp = millis();
 }
 
-uint8_t ActivityMonitor::getLowPowerTimeoutMins() {
+uint8_t UserActivityMonitor::getLowPowerTimeoutMins() {
   return lowPowerTimeoutMs / 60 / 1000;
 }
 
-void ActivityMonitor::setLowPowerTimeoutMins(uint8_t minutes) {
+void UserActivityMonitor::setLowPowerTimeoutMins(uint8_t minutes) {
   lowPowerTimeoutMs = minutes * 60 * 1000;
-  File file = LittleFS.open(LOW_POWER_TIMEOUT_FILE, "w+");
-  file.print(lowPowerTimeoutMs);
-  file.close();
+  config.set(LOW_POWER_TIMEOUT_CONFIG_KEY, lowPowerTimeoutMs);
 }
 
-uint8_t ActivityMonitor::getPowerOffTimeoutMins() {
+uint8_t UserActivityMonitor::getPowerOffTimeoutMins() {
   return powerOffTimeoutMs / 60 / 1000;
 }
 
-void ActivityMonitor::setPowerOffTimeoutMins(uint8_t minutes) {
+void UserActivityMonitor::setPowerOffTimeoutMins(uint8_t minutes) {
   powerOffTimeoutMs = minutes * 60 * 1000;
-  File file = LittleFS.open(POWER_OFF_TIMEOUT_FILE, "w+");
-  file.print(powerOffTimeoutMs);
-  file.close();
+  config.set(POWER_OFF_TIMEOUT_CONFIG_KEY, powerOffTimeoutMs);
 }
 
-void ActivityMonitor::onLowPowerMode(OnModeChangeCallback callback) {
+void UserActivityMonitor::onLowPowerMode(OnModeChangeCallback callback) {
   onLowPowerModeCallback = callback;
 }
 
-void ActivityMonitor::onDefaultMode(OnModeChangeCallback callback) {
+void UserActivityMonitor::onDefaultMode(OnModeChangeCallback callback) {
   onDefaultModeCallback = callback;
 }
 
-void ActivityMonitor::run() {
+void UserActivityMonitor::run() {
   uint32_t inactivityMillis = millis() - lastActivityTimestamp;
   
   if (powerOffTimeoutMs > 0 && inactivityMillis >= powerOffTimeoutMs) {
@@ -71,3 +75,5 @@ void ActivityMonitor::run() {
     if (onDefaultModeCallback != nullptr) onDefaultModeCallback();
   }
 }
+
+UserActivityMonitor ActivityMonitor = UserActivityMonitor(Config);

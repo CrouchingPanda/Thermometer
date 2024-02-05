@@ -3,6 +3,6 @@
 
 #include <lvgl.h>
 
-void make_smoothing_controller(lv_obj_t* parent);
+lv_obj_t* make_smoothing_controller(lv_obj_t* parent);
 
 #endif // !SMOOTHING_CONTROLLER_H

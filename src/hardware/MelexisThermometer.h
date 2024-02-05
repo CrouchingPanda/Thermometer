@@ -1,39 +1,34 @@
 #ifndef MELEXIS_THERMOMETER
 #define MELEXIS_THERMOMETER
 
-#include <Arduino.h>
+#include <stdint.h>
 
-#include <Wire.h>
+#include <Arduino.h>
 
 #include <Smoothed.h>
 #include <Adafruit_MLX90614.h>
 
+#include "../config/ConfigStore.h"
+
 class MelexisThermometer {
 
-  static constexpr const char* EMISSIVITY_FILE = "melexis/emissivity";
-  static constexpr const char* AMBIENT_CORRECTION_OFFSET_FILE = "melexis/ambient_correction";
-  static constexpr const char* SMOOTHING_FACTOR_FILE = "melexis/smoothing_factor";
+  ConfigStore& config;
 
-  static constexpr float MAX_EMISSIVITY = 1.0;
-  static constexpr float MIN_EMISSIVITY = 0.1;
-
-  static constexpr uint8_t MAX_SMOOTHING_FACTOR = 100;
-
-  Smoothed<float>* smoother;
+  Smoothed<double> smoother;
   
-  uint8_t smoothingFactor = 10; // 1..MAX_SMOOTHING_FACTOR; more = less smooth
+  uint8_t smoothingFactor; // 1..MAX_SMOOTHING_FACTOR; more = less smooth
 
-  Adafruit_MLX90614* sensor;
+  Adafruit_MLX90614 sensor;
 
-  float emissivity = MAX_EMISSIVITY;
+  float emissivity;
   
-  // assume the room temperature differs from die temperature by this number
-  // see "Temperature reading dependence on VDD" chapter in datasheet
-  float roomTemperatureOffsetCelsius = (3.3 - 3.0) * 0.6;
+  double roomTemperatureOffsetCelsius;
 
   public:
 
-  void begin(TwoWire* wire);
+  MelexisThermometer(ConfigStore& config);
+
+  void begin();
 
   float objectTemperatureFahrenheit();
 
@@ -53,5 +48,7 @@ class MelexisThermometer {
 
   void setObjectTemperatureSmoothingFactor(uint8_t value);
 };
+
+extern MelexisThermometer Thermometer;
 
 #endif  // !MELEXIS_THERMOMETER

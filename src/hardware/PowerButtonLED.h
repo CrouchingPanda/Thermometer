@@ -1,29 +1,30 @@
 #ifndef POWER_BUTTON_LED_H
 #define POWER_BUTTON_LED_H
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
 #include <jled.h>
 
+#include "../config/ConfigStore.h"
+
 class PowerButtonLED {
 
-  static constexpr uint8_t LED_PIN = 24;
+  ConfigStore& config;
 
-  static constexpr const char* ON_BRIGHTNESS_FILE = "power_led/on_brightness";
-  static constexpr const char* MAX_BREATH_BRIGHTNESS_FILE = "power_led/max_breath_brightness";
-
-  static constexpr uint16_t BREATHING_PERIOD_MS = 3000;
+  JLed led;
 
   enum State { ON, BREATHING, PENDING_UPDATE } state = ON;
 
-  JLed* led;
-
-  uint8_t onBrightness = 50;
-  uint8_t maxBreathBrightness = 127;
+  uint8_t onBrightness;
+  uint8_t maxBreathBrightness;
 
   bool updatePending = false;
 
   public:
+
+  PowerButtonLED(ConfigStore& config);
 
   void begin();
 
@@ -39,5 +40,7 @@ class PowerButtonLED {
 
   void setMaxBreathBrightness(uint8_t value);
 };
+
+extern PowerButtonLED PowerLED;
 
 #endif // !POWER_BUTTON_LED_H

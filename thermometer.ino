@@ -1,5 +1,4 @@
 #include <Wire.h>
-#include <LittleFS.h>
 
 #include "src/hmi/HMI.h"
 #include "src/calibration/CalibrationBoardReceiver.h"
@@ -10,159 +9,149 @@
 #include "src/monitor/ActivityMonitor.h"
 
 // faster doesn't work, not exactly sure why
-constexpr uint16_t I2C_FREQUENCY = 25'000;
-
-static auto hmi = HMI();
-static auto calibrationReceiver = CalibrationBoardReceiver();
-static auto thermometer = MelexisThermometer();
-static auto battery = Battery();
-static auto powerButtonLED = PowerButtonLED();
-static auto healthMonitor = HealthMonitor();
-static auto activityMonitor = ActivityMonitor();
+constexpr uint32_t I2C_FREQUENCY = 70'000;
 
 void setup() {
-  LittleFS.begin();
+  HMI.begin();
+  HMI.showLoadingScreen();
+  HMI.setLoadingPercent(10);
 
-  hmi.begin();  
-  hmi.showLoadingScreen();
-  hmi.setLoadingPercent(10);
+  HealthMonitor.begin();
+  HMI.setLoadingPercent(20);
 
-  healthMonitor.begin();
-  hmi.setLoadingPercent(20);
+  PowerLED.begin();
+  HMI.setLoadingPercent(30);
 
-  powerButtonLED.begin();
-  hmi.setLoadingPercent(30);
-
-  activityMonitor.begin();
-  hmi.setLoadingPercent(40);
+  ActivityMonitor.begin();
+  HMI.setLoadingPercent(40);
 
   Wire1.setClock(I2C_FREQUENCY);
-  hmi.setLoadingPercent(50);
+  HMI.setLoadingPercent(50);
 
-  thermometer.begin(&Wire1);
-  hmi.setLoadingPercent(60);
+  Thermometer.begin();
+  HMI.setLoadingPercent(60);
 
-  battery.begin(&Wire1);
-  hmi.setLoadingPercent(70);
+  LiPoBattery.begin();
+  HMI.setLoadingPercent(70);
 
-  calibrationReceiver.begin();
-  hmi.setLoadingPercent(80);
+  CalibrationReceiver.begin();
+  HMI.setLoadingPercent(80);
 
-  hmi.startLvgl();
-  hmi.setLoadingPercent(90);
+  HMI.startLvgl();
+  HMI.setLoadingPercent(90);
 
-  hmi.setObjectTemperatureWriter(
-    [](){ return thermometer.objectTemperatureFahrenheit(); }
+  HMI.setObjectTemperatureWriter(
+    [](){ return Thermometer.objectTemperatureFahrenheit(); }
   );
 
-  hmi.setRoomTemperatureWriter(
-    [](){ return thermometer.roomTemperatureFahrenheit(); }
+  HMI.setRoomTemperatureWriter(
+    [](){ return Thermometer.roomTemperatureFahrenheit(); }
   );
 
-  hmi.setOnDieTemperatureWriter(
-    [](){ return thermometer.onDieTemperatureFahrenheit(); }
+  HMI.setOnDieTemperatureWriter(
+    [](){ return Thermometer.onDieTemperatureFahrenheit(); }
   );
 
-  hmi.setEmissivityWriter(
-    [](){ return thermometer.getEmissivity(); }
+  HMI.setEmissivityWriter(
+    [](){ return Thermometer.getEmissivity(); }
   );
 
-  hmi.setEmissivityReader(
-    [](float emissivity){ thermometer.setEmissivity(emissivity); }
+  HMI.setEmissivityReader(
+    [](float emissivity){ Thermometer.setEmissivity(emissivity); }
   );
 
-  hmi.setBatteryPercentageWriter(
-    [](){ return battery.chargePercentage(); }
+  HMI.setBatteryPercentageWriter(
+    [](){ return LiPoBattery.chargePercentage(); }
   );
 
-  hmi.setBatteryChargingStatusWriter(
-    [](){ return battery.isCharging(); }
+  HMI.setBatteryChargingStatusWriter(
+    [](){ return LiPoBattery.isCharging(); }
   );
 
-  hmi.setBatteryTemperatureWriter(
-    [](){ return battery.temperatureFahrenheit(); }
+  HMI.setBatteryTemperatureWriter(
+    [](){ return LiPoBattery.temperatureFahrenheit(); }
   );
 
-  hmi.setCalibrationBoardConnectionStatusWriter(
-    [](){ return calibrationReceiver.isConnected(); }
+  HMI.setCalibrationBoardConnectionStatusWriter(
+    [](){ return CalibrationReceiver.isConnected(); }
   );
 
-  hmi.setPrimaryThermistorTemperatureWriter(
-    [](){ return calibrationReceiver.primaryThermistorTemperatureFahrenheit(); }
+  HMI.setPrimaryThermistorTemperatureWriter(
+    [](){ return CalibrationReceiver.primaryThermistorTemperatureFahrenheit(); }
   );
 
-  hmi.setSecondaryThermistorTemperatureWriter(
-    [](){ return calibrationReceiver.secondaryThermistorTemperatureFahrenheit(); }
+  HMI.setSecondaryThermistorTemperatureWriter(
+    [](){ return CalibrationReceiver.secondaryThermistorTemperatureFahrenheit(); }
   );
 
-  hmi.onActivity(
-    [](){ activityMonitor.registerActivity(); }
+  HMI.onActivity(
+    [](){ ActivityMonitor.registerActivity(); }
   );
 
-  hmi.setLowPowerModeTimeoutWriter(
-    [](){ return activityMonitor.getLowPowerTimeoutMins(); }
+  HMI.setLowPowerModeTimeoutWriter(
+    [](){ return ActivityMonitor.getLowPowerTimeoutMins(); }
   );
 
-  hmi.setPowerOffTimeoutWriter(
-    [](){ return activityMonitor.getPowerOffTimeoutMins(); }
+  HMI.setPowerOffTimeoutWriter(
+    [](){ return ActivityMonitor.getPowerOffTimeoutMins(); }
   );
 
-  hmi.setLowPowerModeTimeoutReader(
-    [](uint8_t minutes){ activityMonitor.setLowPowerTimeoutMins(minutes); }
+  HMI.setLowPowerModeTimeoutReader(
+    [](uint8_t minutes){ ActivityMonitor.setLowPowerTimeoutMins(minutes); }
   );
 
-  hmi.setPowerOffTimeoutReader(
-    [](uint8_t minutes){ activityMonitor.setPowerOffTimeoutMins(minutes); }
+  HMI.setPowerOffTimeoutReader(
+    [](uint8_t minutes){ ActivityMonitor.setPowerOffTimeoutMins(minutes); }
   );
 
-  hmi.setPowerIndicatorOnBrightnessWriter(
-    [](){ return powerButtonLED.getOnBrightness(); }
+  HMI.setPowerIndicatorOnBrightnessWriter(
+    [](){ return PowerLED.getOnBrightness(); }
   );
 
-  hmi.setPowerIndicatorMaxBreathBrightnessWriter(
-    [](){ return powerButtonLED.getMaxBreathBrightness(); }
+  HMI.setPowerIndicatorMaxBreathBrightnessWriter(
+    [](){ return PowerLED.getMaxBreathBrightness(); }
   );
 
-  hmi.setPowerIndicatorOnBrightnessReader(
-    [](uint8_t brightness){ powerButtonLED.setOnBrightness(brightness); }
+  HMI.setPowerIndicatorOnBrightnessReader(
+    [](uint8_t brightness){ PowerLED.setOnBrightness(brightness); }
   );
 
-  hmi.setPowerIndicatorMaxBreathBrightnessReader(
-    [](uint8_t brightness){ powerButtonLED.setMaxBreathBrightness(brightness); }
+  HMI.setPowerIndicatorMaxBreathBrightnessReader(
+    [](uint8_t brightness){ PowerLED.setMaxBreathBrightness(brightness); }
   );
 
-  hmi.setObjectTemperatureSmoothingFactorWriter(
-    []() { return thermometer.getObjectTemperatureSmoothingFactor(); }
+  HMI.setObjectTemperatureSmoothingFactorWriter(
+    []() { return Thermometer.getObjectTemperatureSmoothingFactor(); }
   );
 
-  hmi.setObjectTemperatureSmoothingFactorReader(
-    [](uint8_t factor) { thermometer.setObjectTemperatureSmoothingFactor(factor); }
+  HMI.setObjectTemperatureSmoothingFactorReader(
+    [](uint8_t factor) { Thermometer.setObjectTemperatureSmoothingFactor(factor); }
   );
 
-  hmi.setRoomTemperatureOffsetWriter(
-    []() { return thermometer.getRoomTemperatureOffsetCelsius(); }
+  HMI.setRoomTemperatureOffsetWriter(
+    []() { return Thermometer.getRoomTemperatureOffsetCelsius(); }
   );
 
-  hmi.setRoomTemperatureOffsetReader(
-    [](float offset) { thermometer.setRoomTemperatureOffsetCelsius(offset); }
+  HMI.setRoomTemperatureOffsetReader(
+    [](float offset) { Thermometer.setRoomTemperatureOffsetCelsius(offset); }
   );
 
-  activityMonitor.onLowPowerMode(
-    [](){ hmi.initLowPowerMode(); }
+  ActivityMonitor.onLowPowerMode(
+    [](){ HMI.initLowPowerMode(); }
   );
 
-  activityMonitor.onDefaultMode(
-    [](){ hmi.initDefaultMode(); }
+  ActivityMonitor.onDefaultMode(
+    [](){ HMI.initDefaultMode(); }
   );
 
-  hmi.setLoadingPercent(100);
-  hmi.switchFromLoadingScreen();
+  HMI.setLoadingPercent(100);
+  HMI.switchFromLoadingScreen();
 }
 
 void loop() {
-  battery.isCharging() ? powerButtonLED.breathe() : powerButtonLED.on();
-  healthMonitor.run();
-  calibrationReceiver.run();
-  activityMonitor.run();
-  hmi.run();
+  LiPoBattery.isCharging() ? PowerLED.breathe() : PowerLED.on();
+  HealthMonitor.run();
+  CalibrationReceiver.run();
+  ActivityMonitor.run();
+  HMI.run();
 }

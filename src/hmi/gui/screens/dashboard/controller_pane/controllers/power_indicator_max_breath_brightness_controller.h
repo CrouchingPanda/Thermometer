@@ -3,6 +3,6 @@
 
 #include <lvgl.h>
 
-void make_power_indicator_max_breath_brightness_controller(lv_obj_t* parent);
+lv_obj_t* make_power_indicator_max_breath_brightness_controller(lv_obj_t* parent);
 
 #endif // !POWER_INDICATOR_MAX_BREATH_BRIGHTNESS_CONTROLLER_H

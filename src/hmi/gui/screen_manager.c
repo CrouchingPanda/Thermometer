@@ -8,7 +8,9 @@
 #include "screens/auth/auth_screen.h"
 #include "screens/dashboard/dashboard_screen.h"
 
-void animate_screen_change(lv_obj_t* new_screen, lv_dir_t direction) {
+#define AUTH_SCREEN_PASSWORD "1358"
+
+static void animate_screen_change(lv_obj_t* new_screen, lv_dir_t direction) {
   lv_scr_load_anim(
     new_screen, 
     direction, 
@@ -46,7 +48,7 @@ static void handle_dashboard_screen_gestures(lv_event_t* event) {
   animate_screen_change(main_screen, LV_SCR_LOAD_ANIM_MOVE_RIGHT);
 }
 
-void start_screeen_management(void) {
+void start_screen_management(void) {
   top_layer_init();
   main_screen_init();
   auth_screen_init();

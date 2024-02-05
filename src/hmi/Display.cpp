@@ -1,81 +1,113 @@
 #include "Display.h"
 
-#include <Arduino.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#include <LittleFS.h>
+#include <Arduino.h>
 
 #include <lvgl.h>
 #include <TFT_eSPI.h>
 #include <jled.h>
 
+#include "../config/ConfigStore.h"
+#include "LoadingScreen.h"
 #include "ScreenSpec.h"
 
-Display* Display::getInstance() {
-  static Display* instance = new Display();
-  return instance;
-}
+constexpr uint8_t DMA_CHANNEL_COUNT = 12;
 
-void Display::begin() {
+constexpr const char* BACKLIGHT_BRIGHTNESS_CONFIG_KEY = "displayDefaultBrightness";
+constexpr uint8_t BACKLIGHT_PIN = A3;
+constexpr uint8_t BACKLIGHT_LOW_BRIGHTNESS = 16;
+constexpr uint8_t BACKLIGHT_DEFAULT_BRIGHTNESS = 130;
+constexpr uint16_t BACKLIGHT_BRIGHTNESS_CHANGE_MS = 500;
+
+// optimized for the amount of RAM
+constexpr uint16_t DISPLAY_BUFFER_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT / 2 + 12'500;
+
+static lv_color_t firstDrawBuffer[DISPLAY_BUFFER_SIZE];
+static lv_color_t secondDrawBuffer[DISPLAY_BUFFER_SIZE];
+
+static lv_disp_drv_t displayDriver;
+static lv_disp_draw_buf_t displayDrawBuffer;
+
+TFT_eSPI DisplayScreen::display = TFT_eSPI(SCREEN_HEIGHT, SCREEN_WIDTH);
+
+DisplayScreen::DisplayScreen(ConfigStore& config) :
+  config(config),
+  backlight(JLed(BACKLIGHT_PIN)), 
+  loadingScreen(LoadingScreen(display)) {};
+
+void DisplayScreen::begin() {
   display.begin();
   display.setRotation(3); // flipped-over landscape
   initSpiDma();
   
-  File file = LittleFS.open(DEFAULT_BRIGHTNESS_FILE, "r");
-  if (file) {
-    backlightDefaultBrightness = file.parseInt();
-    file.close();
-  }
-  backlight.MaxBrightness(backlightDefaultBrightness);
+  backlightBrightness = config.getOrDefault(
+    BACKLIGHT_BRIGHTNESS_CONFIG_KEY, 
+    BACKLIGHT_DEFAULT_BRIGHTNESS
+  );
+  
+  backlight.MaxBrightness(backlightBrightness);
   backlight.FadeOn(BACKLIGHT_BRIGHTNESS_CHANGE_MS);
 }
 
-void Display::initSpiDma() {
-  bool dmaChannels[DMA_CHANNEL_COUNT];
-  
-  for (uint8_t i = 0; i < DMA_CHANNEL_COUNT; i++) {
-    dmaChannels[i] = dma_channel_is_claimed(i);
-  }
-  
-  display.initDMA();
+static void setDmaCompletionInterrupt(uint8_t dmaChannel) {
+  dma_channel_set_irq0_enabled(dmaChannel, true);
 
-  static uint8_t spiDmaChannel = 0;
+  // static to be able to get captured in the lambda below
+  static uint8_t channel = dmaChannel;
 
-  for (uint8_t i = 0; i < DMA_CHANNEL_COUNT; i++) {
-    if (dma_channel_is_claimed(i) != dmaChannels[i]) {
-      spiDmaChannel = i;
-      break;
-    }
-  }
-
-  dma_channel_set_irq0_enabled(spiDmaChannel, true);
-
+  // LVGL needs be told to start the next pixel buffer flush
+  // once the last DMA pixel transfer is done
   irq_set_exclusive_handler(
     DMA_IRQ_0,
     []() {
       lv_disp_flush_ready(&displayDriver);
-      dma_channel_acknowledge_irq0(spiDmaChannel);
+      dma_channel_acknowledge_irq0(channel);
     }
   );
 
   irq_set_enabled(DMA_IRQ_0, true);
 }
 
-void Display::showLoadingScreen() {
-  loadingScreen.begin(&display);
+void DisplayScreen::initSpiDma() {
+  bool dmaChannels[DMA_CHANNEL_COUNT]; // "true" = captured
+  
+  for (size_t i = 0; i < DMA_CHANNEL_COUNT; ++i) {
+    dmaChannels[i] = dma_channel_is_claimed(i);
+  }
+  
+  // one DMA channel gets claimed here; we need to find which one
+  display.initDMA();
+
+  uint8_t claimedDmaChannel = 0;
+
+  for (size_t i = 0; i < DMA_CHANNEL_COUNT; ++i) {
+    if (dma_channel_is_claimed(i) != dmaChannels[i]) {
+      claimedDmaChannel = i;
+      break;
+    }
+  }
+
+  setDmaCompletionInterrupt(claimedDmaChannel);
+}
+
+void DisplayScreen::showLoadingScreen() {
+  loadingScreen.begin();
   while (backlight.Update());
 }
 
-void Display::setLoadingPercent(uint8_t percent) {
+void DisplayScreen::setLoadingPercent(uint8_t percent) {
   loadingScreen.setLoadingPercent(percent);
 }
 
-void Display::switchFromLoadingScreen() {
+void DisplayScreen::switchFromLoadingScreen() {
   backlight.FadeOff(BACKLIGHT_BRIGHTNESS_CHANGE_MS);
   while (backlight.Update());
   backlight.FadeOn(BACKLIGHT_BRIGHTNESS_CHANGE_MS);
 }
 
-void Display::registerWithLvgl() {
+void DisplayScreen::registerWithLvgl() {
   lv_disp_draw_buf_init(
     &displayDrawBuffer,
     firstDrawBuffer,
@@ -91,20 +123,20 @@ void Display::registerWithLvgl() {
   lv_disp_drv_register(&displayDriver);
 }
 
-void Display::initDefaultPowerMode() {
+void DisplayScreen::initDefaultPowerMode() {
   if (powerMode == DEFAULT) return;
   backlight.FadeOn(BACKLIGHT_BRIGHTNESS_CHANGE_MS);
   powerMode = DEFAULT;
 }
 
-void Display::initLowPowerMode() {
+void DisplayScreen::initLowPowerMode() {
   if (powerMode == LOW) return;
   backlight.MinBrightness(BACKLIGHT_LOW_BRIGHTNESS);
   backlight.FadeOff(BACKLIGHT_BRIGHTNESS_CHANGE_MS);
   powerMode = LOW;
 }
 
-void Display::flushBufferToDisplay(
+void DisplayScreen::flushBufferToDisplay(
   lv_disp_drv_t* _,
   const lv_area_t* displayArea,
   lv_color_t* pixels
@@ -117,26 +149,24 @@ void Display::flushBufferToDisplay(
   display.pushPixelsDMA((uint16_t*) &pixels->full, width * height);
 }
 
-void Display::run() {
+void DisplayScreen::run() {
   backlight.Update();
 }
 
-uint8_t Display::getDefaultBrightness() {
-  return backlightDefaultBrightness;
+uint8_t DisplayScreen::getDefaultBrightness() {
+  return backlightBrightness;
 }
 
-void Display::setDefaultBrightness(uint8_t newBrightness) {
-  if (backlightDefaultBrightness == newBrightness) return;
+void DisplayScreen::setDefaultBrightness(uint8_t newBrightness) {
+  if (backlightBrightness == newBrightness) return;
   if (BACKLIGHT_LOW_BRIGHTNESS > newBrightness) newBrightness = BACKLIGHT_LOW_BRIGHTNESS;
 
-  uint8_t currentBrightness = backlightDefaultBrightness;
-  backlightDefaultBrightness = newBrightness;
+  uint8_t currentBrightness = backlightBrightness;
+  backlightBrightness = newBrightness;
   backlight.MaxBrightness(newBrightness);
   backlight.Fade(currentBrightness, newBrightness, BACKLIGHT_BRIGHTNESS_CHANGE_MS);
 
-  File file = LittleFS.open(DEFAULT_BRIGHTNESS_FILE, "w+");
-  if (file) {
-    file.print(backlightDefaultBrightness);
-    file.close();
-  }
+  config.set(BACKLIGHT_BRIGHTNESS_CONFIG_KEY, backlightBrightness);
 }
+
+DisplayScreen Display = DisplayScreen(Config);

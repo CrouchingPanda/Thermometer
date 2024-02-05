@@ -1,3 +1,7 @@
+/*
+ * This file exists as a delimiter between C++ and C linkage.
+ */
+
 #ifndef UI_H
 #define UI_H
 

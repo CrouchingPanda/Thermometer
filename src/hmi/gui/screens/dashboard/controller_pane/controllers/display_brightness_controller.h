@@ -3,6 +3,6 @@
 
 #include <lvgl.h>
 
-void make_display_brightness_controller(lv_obj_t* parent);
+lv_obj_t* make_display_brightness_controller(lv_obj_t* parent);
 
 #endif // !DISPLAY_BRIGHTNESS_CONTROLLER_H

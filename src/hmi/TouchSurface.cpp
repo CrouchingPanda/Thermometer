@@ -1,5 +1,7 @@
 #include "TouchSurface.h"
 
+#include <stdint.h>
+
 #include <Arduino.h>
 
 #include <lvgl.h>
@@ -7,10 +9,12 @@
 
 #include "ScreenSpec.h"
 
-TouchSurface* TouchSurface::getInstance() {
-  static TouchSurface* instance = new TouchSurface();
-  return instance;
-}
+constexpr uint8_t TOUCHSCREEN_SDA_PIN = 0;
+constexpr uint8_t TOUCHSCREEN_SCL_PIN = 1;
+
+Adafruit_FT6206 TouchSurface::touchSurface = Adafruit_FT6206();
+
+TouchSurface::OnTouchCallback TouchSurface::onTouchCallback = nullptr;
 
 void TouchSurface::begin() {
   Wire.setSDA(TOUCHSCREEN_SDA_PIN);
@@ -45,3 +49,5 @@ void TouchSurface::readTouchpad(lv_indev_drv_t* _, lv_indev_data_t* touchData) {
     touchData->state = LV_INDEV_STATE_REL;
   }
 }
+
+TouchSurface CapTouchSurface = TouchSurface();
