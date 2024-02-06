@@ -30,7 +30,7 @@ const char* brightness_options(void) {
 void update_brightness_controller(lv_event_t* event) {
   lv_obj_t* controller = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
-  uint8_t* brightness = (uint8_t*) lv_msg_get_payload(message);
+  uint8_t* brightness = (uint8_t*)lv_msg_get_payload(message);
   for (size_t i = 0; i < BRIGHNTESS_OPTION_COUNT; ++i) {
     if (*brightness <= i * BRIGHTNESS_OPTION_STEP) {
       controller_select_option(controller, i);

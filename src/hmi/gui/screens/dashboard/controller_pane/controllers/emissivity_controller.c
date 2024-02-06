@@ -40,7 +40,7 @@ static void set_new_emissivity(uint8_t optionIndex) {
 static void update_controller(lv_event_t* event) {
   lv_obj_t* controller = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
-  float* emissivity = (float*) lv_msg_get_payload(message);
+  float* emissivity = (float*)lv_msg_get_payload(message);
   uint8_t optionIndex = nearbyint((MAX_EMISSIVITY - *emissivity) / EMISSIVITY_STEP);
   controller_select_option(controller, optionIndex);
 }

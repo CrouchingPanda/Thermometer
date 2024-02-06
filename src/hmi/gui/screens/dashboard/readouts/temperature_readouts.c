@@ -8,7 +8,7 @@
 static void update_temperature_readout(lv_event_t* event) {
   lv_obj_t* readout = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
-  float* temperature = (float*) lv_msg_get_payload(message);
+  float* temperature = (float*)lv_msg_get_payload(message);
   temperature_readout_set_reading(readout, *temperature);
 }
 

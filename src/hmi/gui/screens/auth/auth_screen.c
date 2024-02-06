@@ -31,7 +31,7 @@ static void handle_password_typing(lv_event_t* event) {
     lv_textarea_set_text(password_input_area, "");
   } else if (strcmp(button_text, LV_SYMBOL_NEW_LINE) == 0) {
     const char* input = lv_textarea_get_text(password_input_area);
-    lv_event_send(lv_scr_act(), LV_EVENT_READY, (void*) input);
+    lv_event_send(lv_scr_act(), LV_EVENT_READY, (void*)input);
   } else {
     lv_textarea_add_text(password_input_area, button_text);
     lv_obj_add_flag(bad_password_alert, LV_OBJ_FLAG_HIDDEN);

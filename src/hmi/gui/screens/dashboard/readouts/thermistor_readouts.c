@@ -10,14 +10,14 @@ static void update_thermistor_readout(lv_event_t* event) {
   lv_msg_t* message = lv_event_get_msg(event);
 
   if (lv_msg_get_id(message) == NEW_CALIBRATION_BOARD_CONNECTION) {
-    bool isConnected = *(bool*) lv_msg_get_payload(message);
+    bool isConnected = *(bool*)lv_msg_get_payload(message);
     if (isConnected) {
       lv_obj_clear_flag(readout, LV_OBJ_FLAG_HIDDEN);
     } else {
       lv_obj_add_flag(readout, LV_OBJ_FLAG_HIDDEN);
     }
   } else {
-    float* temperature = (float*) lv_msg_get_payload(message);
+    float* temperature = (float*)lv_msg_get_payload(message);
     temperature_readout_set_reading(readout, *temperature);
   }
 }

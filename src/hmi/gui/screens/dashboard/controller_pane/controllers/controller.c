@@ -55,7 +55,7 @@ void controller_select_option(lv_obj_t* controller, uint8_t optionIndex) {
 }
 
 static void handle_option_change(lv_event_t* event) {
-  option_change_handler callback = (option_change_handler) lv_event_get_user_data(event);
+  option_change_handler callback = (option_change_handler)lv_event_get_user_data(event);
   lv_obj_t* roller = lv_event_get_target(event);
   uint16_t optionIndex = lv_roller_get_selected(roller);
   callback(optionIndex);

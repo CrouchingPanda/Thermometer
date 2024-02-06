@@ -68,7 +68,7 @@ void PublicHMI::registerDisplayHooksWithLvgl() {
       uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
       display->setDefaultBrightness(*newBrightness);
     },
-    (void*) &display
+    static_cast<void*>(&display)
   );
 }
 
@@ -97,7 +97,7 @@ void PublicHMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
       lv_msg_send(NEW_BATTERY_PERCENTAGE, &percentage);
     },
     BATTERY_CHARGE_PERCENTAGE_UPDATE_FREQUENCY_MS,
-    (void*) callback
+    static_cast<void*>(callback)
   );
 
   uint8_t percentage = callback();
@@ -112,7 +112,7 @@ void PublicHMI::setBatteryChargingStatusWriter(BatteryChargingStatusWriter callb
       lv_msg_send(NEW_BATTERY_CHARGING_STATUS, &batteryIsCharging);
     },
     BATTERY_CHARGING_STATUS_UPDATE_FREQUENCY_MS,
-    (void*) callback
+    static_cast<void*>(callback)
   );
 
   bool batteryIsCharging = callback(); 
@@ -132,7 +132,7 @@ void PublicHMI::setEmissivityReader(EmissivityReader callback) {
       float* newEmissivity = (float*) lv_msg_get_payload(message);
       setEmissivity(*newEmissivity);
     },
-    (void*) callback
+    static_cast<void*>(callback)
   );
 }
 
@@ -144,7 +144,7 @@ void PublicHMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter
       lv_msg_send(NEW_CALIBRATION_BOARD_CONNECTION, &boardIsConnected);
     },
     CALIBRATION_BOARD_CONNECTION_STATUS_UPDATE_FREQUENCY_MS,
-    (void*) callback
+    static_cast<void*>(callback)
   );
 
   bool boardIsConnected = callback();
@@ -159,7 +159,7 @@ void PublicHMI::makeTemperatureWriterTimer(TemperatureWriterTimerDTO* dto) {
       lv_msg_send(dto->message, &temperature);
     },
     dto->frequencyMs,
-    (void*) dto
+    static_cast<void*>(dto)
   );
 }
 
@@ -238,7 +238,7 @@ void PublicHMI::makeTimeoutReaderSubscription(Message message, TimeoutReader cal
       uint8_t* newTimeout = (uint8_t*) lv_msg_get_payload(message);
       setTimeout(*newTimeout);
     },
-    (void*) callback
+    static_cast<void*>(callback)
   );
 }
 
@@ -271,7 +271,7 @@ void PublicHMI::makeBrightnessReaderSubscription(Message message, BrightnessRead
       uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
       setBrightness(*newBrightness);
     },
-    (void*) callback
+    static_cast<void*>(callback)
   );
 }
 
@@ -296,7 +296,7 @@ void PublicHMI::setObjectTemperatureSmoothingFactorReader(SmoothingFactorReader 
       uint8_t* newSmoothingFactor = (uint8_t*) lv_msg_get_payload(message);
       setSmoothingFactor(*newSmoothingFactor);
     },
-    (void*) callback
+    static_cast<void*>(callback)
   );
 }
 
@@ -313,7 +313,7 @@ void PublicHMI::setRoomTemperatureOffsetReader(TemperatureOffsetReader callback)
       float* newOffset = (float*) lv_msg_get_payload(message);
       setOffset(*newOffset);
     },
-    (void*) callback
+    static_cast<void*>(callback)
   );
 }
 

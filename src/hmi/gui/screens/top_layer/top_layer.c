@@ -1,5 +1,7 @@
 #include "top_layer.h"
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <lvgl.h>
@@ -13,7 +15,7 @@
 
 static void update_calibration_board_connection_indicator(lv_event_t* event) {
   lv_msg_t* message = lv_event_get_msg(event);
-  bool isConnected = *(bool*) lv_msg_get_payload(message);
+  bool isConnected = *(bool*)lv_msg_get_payload(message);
   lv_obj_t* connection_status_indicator = lv_event_get_target(event);
   if (isConnected) {
     lv_obj_clear_flag(connection_status_indicator, LV_OBJ_FLAG_HIDDEN);
@@ -24,7 +26,7 @@ static void update_calibration_board_connection_indicator(lv_event_t* event) {
 
 static void update_charging_indicator(lv_event_t* event) {
   lv_msg_t* message = lv_event_get_msg(event);
-  bool isCharging = *(bool*) lv_msg_get_payload(message);
+  bool isCharging = *(bool*)lv_msg_get_payload(message);
   lv_obj_t* charging_indicator = lv_event_get_target(event);
   if (isCharging) {
     lv_obj_clear_flag(charging_indicator, LV_OBJ_FLAG_HIDDEN);
@@ -56,7 +58,7 @@ static void update_battery_indicator(lv_event_t* event) {
 
 static void update_low_battery_modal(lv_event_t* event) {
   lv_msg_t* message = lv_event_get_msg(event);
-  uint8_t batteryChargePercentage = *(uint8_t*) lv_msg_get_payload(message);
+  uint8_t batteryChargePercentage = *(uint8_t*)lv_msg_get_payload(message);
   lv_obj_t* low_battery_modal = lv_event_get_target(event);
   if (batteryChargePercentage > LOW_BATTERY_PERCENTAGE + 1) {
     lv_obj_add_flag(low_battery_modal, LV_OBJ_FLAG_HIDDEN);

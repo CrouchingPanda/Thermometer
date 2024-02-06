@@ -12,7 +12,7 @@ lv_obj_t* main_screen;
 static void update_temperature_display(lv_event_t* event) {
   lv_obj_t* temperature_display = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
-  float* temperature = (float*) lv_msg_get_payload(message);
+  float* temperature = (float*)lv_msg_get_payload(message);
   lv_label_set_text_fmt(temperature_display, "%.2f°F", *temperature);
 }
 

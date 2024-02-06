@@ -39,7 +39,7 @@ static void set_new_brightness(uint8_t optionIndex) {
 static void update_controller(lv_event_t* event) {
   lv_obj_t* controller = lv_event_get_target(event);
   lv_msg_t* message = lv_event_get_msg(event);
-  uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
+  uint8_t* newBrightness = (uint8_t*)lv_msg_get_payload(message);
   for (size_t i = 0; i < BRIGHTNESS_OPTION_COUNT; ++i) {
     uint8_t brightness = MAX_BRIGHTNESS - i * BRIGHTNESS_STEP;
     if (*newBrightness >= brightness) {
