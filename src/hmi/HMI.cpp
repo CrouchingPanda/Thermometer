@@ -64,8 +64,8 @@ void PublicHMI::registerDisplayHooksWithLvgl() {
   lv_msg_subscribe(
     SET_DISPLAY_BRIGHTNESS,
     [](void* _, lv_msg_t* message) {
-      auto display = (DisplayScreen*) lv_msg_get_user_data(message);
-      uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
+      auto display = static_cast<DisplayScreen*>(lv_msg_get_user_data(message));
+      auto newBrightness = static_cast<const uint8_t*>(lv_msg_get_payload(message));
       display->setDefaultBrightness(*newBrightness);
     },
     static_cast<void*>(&display)
@@ -92,12 +92,12 @@ void PublicHMI::run() {
 void PublicHMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
-      auto getBatteryPercentage = (BatteryPercentageWriter) timer->user_data;
+      auto getBatteryPercentage = reinterpret_cast<BatteryPercentageWriter>(timer->user_data);
       uint8_t percentage = getBatteryPercentage();
       lv_msg_send(NEW_BATTERY_PERCENTAGE, &percentage);
     },
     BATTERY_CHARGE_PERCENTAGE_UPDATE_FREQUENCY_MS,
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 
   uint8_t percentage = callback();
@@ -107,12 +107,12 @@ void PublicHMI::setBatteryPercentageWriter(BatteryPercentageWriter callback) {
 void PublicHMI::setBatteryChargingStatusWriter(BatteryChargingStatusWriter callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
-      auto getBatteryChargingStatus = (BatteryPercentageWriter) timer->user_data;
+      auto getBatteryChargingStatus = reinterpret_cast<BatteryPercentageWriter>(timer->user_data);
       bool batteryIsCharging = getBatteryChargingStatus();
       lv_msg_send(NEW_BATTERY_CHARGING_STATUS, &batteryIsCharging);
     },
     BATTERY_CHARGING_STATUS_UPDATE_FREQUENCY_MS,
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 
   bool batteryIsCharging = callback(); 
@@ -128,23 +128,23 @@ void PublicHMI::setEmissivityReader(EmissivityReader callback) {
   lv_msg_subscribe(
     SET_EMISSIVITY,
     [](void* _, lv_msg_t* message) {
-      auto setEmissivity = (EmissivityReader) lv_msg_get_user_data(message);
-      float* newEmissivity = (float*) lv_msg_get_payload(message);
+      auto setEmissivity = reinterpret_cast<EmissivityReader>(lv_msg_get_user_data(message));
+      auto newEmissivity = static_cast<const float*>(lv_msg_get_payload(message));
       setEmissivity(*newEmissivity);
     },
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 }
 
-void PublicHMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter  callback) {
+void PublicHMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter callback) {
   lv_timer_create(
     [](lv_timer_t* timer) {
-      auto getConnectionStatus = (ConnectionStatusWriter) timer->user_data;
+      auto getConnectionStatus = reinterpret_cast<ConnectionStatusWriter>(timer->user_data);
       bool boardIsConnected = getConnectionStatus();
       lv_msg_send(NEW_CALIBRATION_BOARD_CONNECTION, &boardIsConnected);
     },
     CALIBRATION_BOARD_CONNECTION_STATUS_UPDATE_FREQUENCY_MS,
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 
   bool boardIsConnected = callback();
@@ -154,7 +154,7 @@ void PublicHMI::setCalibrationBoardConnectionStatusWriter(ConnectionStatusWriter
 void PublicHMI::makeTemperatureWriterTimer(TemperatureWriterTimerDTO* dto) {
   lv_timer_create(
     [](lv_timer_t* timer) {
-      auto dto = (TemperatureWriterTimerDTO*) timer->user_data;
+      auto dto = static_cast<TemperatureWriterTimerDTO*>(timer->user_data);
       float temperature = dto->getTemperature();
       lv_msg_send(dto->message, &temperature);
     },
@@ -234,11 +234,11 @@ void PublicHMI::makeTimeoutReaderSubscription(Message message, TimeoutReader cal
   lv_msg_subscribe(
     message,
     [](void* _, lv_msg_t* message) {
-      auto setTimeout = (TimeoutReader) lv_msg_get_user_data(message);
-      uint8_t* newTimeout = (uint8_t*) lv_msg_get_payload(message);
+      auto setTimeout = reinterpret_cast<TimeoutReader>(lv_msg_get_user_data(message));
+      auto newTimeout = static_cast<const uint8_t*>(lv_msg_get_payload(message));
       setTimeout(*newTimeout);
     },
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 }
 
@@ -267,11 +267,11 @@ void PublicHMI::makeBrightnessReaderSubscription(Message message, BrightnessRead
   lv_msg_subscribe(
     message,
     [](void* _, lv_msg_t* message) {
-      auto setBrightness = (BrightnessReader) lv_msg_get_user_data(message);
-      uint8_t* newBrightness = (uint8_t*) lv_msg_get_payload(message);
+      auto setBrightness = reinterpret_cast<BrightnessReader>(lv_msg_get_user_data(message));
+      auto newBrightness = static_cast<const uint8_t*>(lv_msg_get_payload(message));
       setBrightness(*newBrightness);
     },
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 }
 
@@ -292,11 +292,11 @@ void PublicHMI::setObjectTemperatureSmoothingFactorReader(SmoothingFactorReader 
   lv_msg_subscribe(
     SET_OBJECT_TEMPERATURE_SMOOTHER_FACTOR,
     [](void* _, lv_msg_t* message) {
-      auto setSmoothingFactor = (SmoothingFactorReader) lv_msg_get_user_data(message);
-      uint8_t* newSmoothingFactor = (uint8_t*) lv_msg_get_payload(message);
+      auto setSmoothingFactor = reinterpret_cast<SmoothingFactorReader>(lv_msg_get_user_data(message));
+      auto newSmoothingFactor = static_cast<const uint8_t*>(lv_msg_get_payload(message));
       setSmoothingFactor(*newSmoothingFactor);
     },
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 }
 
@@ -309,11 +309,11 @@ void PublicHMI::setRoomTemperatureOffsetReader(TemperatureOffsetReader callback)
   lv_msg_subscribe(
     SET_ROOM_TEMPERATURE_OFFSET,
     [](void* _, lv_msg_t* message) {
-      auto setOffset = (TemperatureOffsetReader) lv_msg_get_user_data(message);
-      float* newOffset = (float*) lv_msg_get_payload(message);
+      auto setOffset = reinterpret_cast<TemperatureOffsetReader>(lv_msg_get_user_data(message));
+      auto newOffset = static_cast<const float*>(lv_msg_get_payload(message));
       setOffset(*newOffset);
     },
-    static_cast<void*>(callback)
+    reinterpret_cast<void*>(callback)
   );
 }
 
