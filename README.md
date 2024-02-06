@@ -87,7 +87,7 @@ in real-life scenarios the sensor can have higher temperature (perhaps due to se
 
 | Title              | Version |
 |--------------------|---------|
-| lvgl               | 8.3.10  |
+| lvgl               | 8.3.11  |
 | TFT_eSPI           | 2.5.34  |
 | Smoothed           | 1.2     |
 | SerialTransfer     | 3.1.3   |
@@ -97,3 +97,8 @@ in real-life scenarios the sensor can have higher temperature (perhaps due to se
 | Adafruit LC709203F | 1.3.4   |
 | Adafruit FT6206    | 1.1.0   |
 | Adafruit BusIO     | 1.14.5  |
+| ArduinoJson        | 7.0.0   |
+
+## Platform
+
+Arduino core used is Raspberry Pi Pico / RP2040 by Earle F. Philhower, III v3.6.3.
