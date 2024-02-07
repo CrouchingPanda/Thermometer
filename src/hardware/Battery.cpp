@@ -19,11 +19,11 @@ constexpr float REF_BOARD_VOLTAGE = 3.3;
 constexpr uint8_t CHARGING_STATUS_CHECK_PIN = A2;
 constexpr uint8_t VOLTAGE_PIN = 14;
 
-// battery-specific per LC709203F datasheet
+// per LC709203F datasheet for 500mAh 3.7V battery
 constexpr uint8_t BATTERY_APA = 0x10;
 constexpr uint8_t BATTERY_PROFILE = 1;
 
-// thermistor-specific
+// B25/B50 for thermistor P/N NXFT15XV103FEAB045
 constexpr uint16_t BATTERY_THERMISTOR_B_VALUE = 3936;
 
 void Battery::begin() {
