@@ -2,9 +2,33 @@
 
 Board for temperature measurement built around MLX90614 infrared surface temperature sensor.
 
+## Platform
+
+Arduino core used is Raspberry Pi Pico / RP2040 by Earle F. Philhower, III v3.7.0.
+
+[InterboardSerial](https://github.com/CrouchingPanda/InterboardSerial) custom library is used 
+for communicating with the calibration board.
+
+## Libraries
+
+| Title              | Version |
+|--------------------|---------|
+| lvgl               | 8.3.11  |
+| TFT_eSPI           | 2.5.34  |
+| Smoothed           | 1.2.0   |
+| SerialTransfer     | 3.1.3   |
+| NeoPixelConnect    | 1.2.0   |
+| JLed               | 4.13.1  |
+| Adafruit MLX90614  | 2.1.5   |
+| Adafruit LC709203F | 1.3.4   |
+| Adafruit FT6206    | 1.1.0   |
+| Adafruit BusIO     | 1.15.0  |
+| ArduinoJson        | 7.0.3   |
+| InterboardSerial   | latest  |
+
 ## Theory Highlights
 
-### For any object: 
+### For any object
 
 ```math
 ε + R + 𝜏 = 1
@@ -16,13 +40,13 @@ $R$ = Reflectivity
 
 $𝜏$ = Transmissivity
 
-### For non-transparent object:
+### For non-transparent object
 
 ```math
 𝜏 = 0; ε + R = 1
 ```
 
-### Stefan-Boltzmann Law:
+### Stefan-Boltzmann Law
 
 ```math
 M_e = P/A = εσ(T_o^4 - T_a^4)
@@ -40,7 +64,7 @@ $T_o$ = temperature of an object
 
 $T_a$ = ambient temperature
 
-### Sensor/object arrangement:
+### Sensor/object arrangement
 
 ```
  sensor (M_s)                                object
@@ -82,23 +106,3 @@ emissivity of choice and now taking the temperature for the unknown variable.
 
 Also, when doing calculations manually on MCU, the $T_s = T_r$ assumption can be tweaked, as it has been noted that 
 in real-life scenarios the sensor can have higher temperature (perhaps due to self-heating) than the background.
-
-## Libraries
-
-| Title              | Version |
-|--------------------|---------|
-| lvgl               | 8.3.11  |
-| TFT_eSPI           | 2.5.34  |
-| Smoothed           | 1.2     |
-| SerialTransfer     | 3.1.3   |
-| NeoPixelConnect    | 1.2.0   |
-| JLed               | 4.13.1  |
-| Adafruit MLX90614  | 2.1.5   |
-| Adafruit LC709203F | 1.3.4   |
-| Adafruit FT6206    | 1.1.0   |
-| Adafruit BusIO     | 1.14.5  |
-| ArduinoJson        | 7.0.0   |
-
-## Platform
-
-Arduino core used is Raspberry Pi Pico / RP2040 by Earle F. Philhower, III v3.6.3.
