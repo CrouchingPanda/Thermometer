@@ -23,8 +23,8 @@ constexpr uint8_t VOLTAGE_PIN = 14;
 constexpr uint8_t BATTERY_APA = 0x10;
 constexpr uint8_t BATTERY_PROFILE = 1;
 
-// B25/B50 for thermistor P/N NXFT15XV103FEAB045
-constexpr uint16_t BATTERY_THERMISTOR_B_VALUE = 3936;
+// B25/B50 for thermistor P/N NXFT15XH103FEAB050
+constexpr uint16_t BATTERY_THERMISTOR_B_VALUE = 3380;
 
 void Battery::begin() {
   pinMode(VOLTAGE_PIN, OUTPUT);
