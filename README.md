@@ -106,3 +106,42 @@ emissivity of choice and now taking the temperature for the unknown variable.
 
 Also, when doing calculations manually on MCU, the $T_s = T_r$ assumption can be tweaked, as it has been noted that 
 in real-life scenarios the sensor can have higher temperature (perhaps due to self-heating) than the background.
+
+### Calculations
+
+First, we get both the object temperature $T_o$ as well as the sensor temperature $T_s$ with device's emissivity $ε$
+set to `1.0`. For the sake of this example, we get $T_o = 73.0$ and $T_s = 69.0$. For the sake of simplicity the room 
+temperature is assumed the same as the sensor temperature. Applying the equation above we get:
+
+```math
+M_s = 1 * σ * ((73.0)^4 - (69.0)^4) + (1 - 1) * σ * ((69.0)^4 - (69.0)^4)
+```
+
+```math
+M_s / σ  = 5,731,120
+```
+
+Now we calculate the actual object temperature using what we believe is the real emissivity of whatever material 
+we are measuring. Let's say the material is anodized aluminum with emissivity `0.77`. Applying the same formula
+backward we get:
+
+```math
+M_s = 0.77 * σ * (T_o^4 - (69.0)^4) + 0.23 * σ * ((69.0)^4 - (69.0)^4)
+```
+
+```math
+M_s / σ = 0.77 * T_o^4 - 17,453,683.17
+```
+
+```math
+5,731,120 = 0.77 * T_o^4 - 17,453,683.17
+```
+
+```math
+5,731,120 = 0.77 * T_o^4 - 17,453,683.17
+```
+
+```math
+T_o = 74.07
+```
+
